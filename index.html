@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sevk Verisi Giriş İstasyonu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f1117;
+            --surface: #1a1d27;
+            --border: #2a2d3a;
+            --primary: #6c63ff;
+            --primary-hover: #5a52d5;
+            --secondary: #00d4aa;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-primary: #e8e8ed;
+            --text-secondary: #8b8d98;
+            --highlight: rgba(245, 158, 11, 0.2);
+            --highlight-border: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: rgba(26, 29, 39, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .privacy-note {
+            font-size: 0.8rem;
+            color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Main Layout */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Panel (PDF) */
+        .left-panel {
+            flex: 6;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            position: relative;
+        }
+
+        .pdf-upload-zone {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 17, 23, 0.9);
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+        
+        .pdf-upload-zone.hidden {
+            display: none;
+        }
+
+        .pdf-upload-zone.dragover {
+            background: rgba(108, 99, 255, 0.1);
+            border: 2px dashed var(--primary);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .pdf-viewer-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            padding: 1rem;
+        }
+
+        .extracted-text-panel {
+            height: 30%;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 0.5rem 1rem;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .extracted-text-content {
+            flex: 1;
+            padding: 1rem;
+            overflow: auto;
+            font-family: monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            color: #d1d5db;
+        }
+
+        /* Right Panel (Form) */
+        .right-panel {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-color);
+        }
+
+        .form-actions {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            background: var(--surface);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .form-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        /* Accordion */
+        .accordion-item {
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .accordion-header:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .accordion-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .accordion-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+        }
+
+        .accordion-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .accordion-item.active .accordion-content {
+            padding: 1rem;
+            max-height: 2000px; /* Arbitrary large number for transition */
+        }
+
+        .accordion-item.active .accordion-header {
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Form Fields */
+        .field-group {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        input, select {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.6rem 0.75rem;
+            border-radius: 0.375rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.2);
+        }
+
+        input.auto-filled, select.auto-filled {
+            background: var(--highlight);
+            border-color: var(--highlight-border);
+            animation: pulse-border 2s;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        /* Bottom Table Panel */
+        .bottom-panel {
+            height: 250px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 2;
+        }
+        
+        tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--surface);
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn 0.3s forwards;
+        }
+        
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideOut {
+            to { opacity: 0; transform: translateX(100%); }
+        }
+        
+        /* Grid layout for form fields */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* ===== MOBILE TAB NAVIGATION ===== */
+        .mobile-tabs {
+            display: none;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .mobile-tabs button {
+            flex: 1;
+            min-width: 0;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .mobile-tabs button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: rgba(108, 99, 255, 0.08);
+        }
+
+        /* ===== RESPONSIVE: TABLET (≤ 900px) ===== */
+        @media (max-width: 900px) {
+            header {
+                padding: 0.75rem 1rem;
+            }
+            .header-title h1 {
+                font-size: 1.05rem;
+            }
+            .privacy-note {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.5rem;
+            }
+            .progress-container {
+                width: 160px;
+            }
+            .main-content {
+                flex-direction: column;
+            }
+            .left-panel {
+                flex: none;
+                height: 45%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .right-panel {
+                flex: 1;
+                min-height: 0;
+            }
+            .bottom-panel {
+                height: auto;
+                max-height: 250px;
+            }
+        }
+
+        /* ===== RESPONSIVE: MOBILE (≤ 768px) ===== */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+            header {
+                padding: 0.65rem 0.75rem;
+                flex-wrap: wrap;
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+            .header-title {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .header-title h1 {
+                font-size: 0.95rem;
+            }
+            .privacy-note {
+                font-size: 0.65rem;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                gap: 0.5rem;
+            }
+            .header-actions .btn {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.6rem;
+            }
+            .header-actions .btn svg {
+                width: 14px;
+                height: 14px;
+            }
+            .progress-container {
+                width: 120px;
+            }
+            .progress-text {
+                font-size: 0.65rem;
+            }
+            /* Mobile Tab Navigation */
+            .mobile-tabs {
+                display: flex;
+                position: sticky;
+                top: auto;
+                z-index: 15;
+            }
+            .main-content {
+                flex-direction: column;
+                overflow: visible;
+                flex: none;
+            }
+            /* Panel switching via tabs */
+            .left-panel {
+                flex: none;
+                height: auto;
+                min-height: 300px;
+                max-height: 55vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .left-panel.panel-hidden {
+                display: none;
+            }
+            .right-panel {
+                flex: none;
+                height: auto;
+                min-height: 400px;
+            }
+            .right-panel.panel-hidden {
+                display: none;
+            }
+            .form-actions {
+                padding: 0.6rem 0.75rem;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+            }
+            .form-actions .btn {
+                font-size: 0.75rem;
+                padding: 0.45rem 0.65rem;
+            }
+            .form-container {
+                padding: 0.75rem;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .accordion-header {
+                padding: 0.75rem;
+            }
+            .accordion-title {
+                font-size: 0.85rem;
+            }
+            .accordion-status {
+                font-size: 0.65rem;
+            }
+            .accordion-item.active .accordion-content {
+                padding: 0.75rem;
+            }
+            .field-group {
+                margin-bottom: 0.75rem;
+            }
+            label {
+                font-size: 0.78rem;
+            }
+            input, select {
+                padding: 0.7rem 0.75rem;
+                font-size: 0.85rem;
+                /* Prevent zoom on iOS */
+                font-size: max(0.85rem, 16px);
+            }
+            /* Bottom panel */
+            .bottom-panel {
+                height: auto;
+                min-height: 200px;
+            }
+            .bottom-panel.panel-hidden {
+                display: none;
+            }
+            .table-container {
+                padding: 0.5rem;
+            }
+            table {
+                font-size: 0.75rem;
+            }
+            th, td {
+                padding: 0.5rem;
+            }
+            /* PDF upload zone */
+            .pdf-upload-zone h2 {
+                font-size: 1.1rem;
+            }
+            .upload-icon {
+                font-size: 3rem;
+            }
+            .extracted-text-panel {
+                height: 40%;
+                min-height: 120px;
+            }
+            .extracted-text-content {
+                font-size: 0.75rem;
+                padding: 0.6rem;
+            }
+            /* Toast mobile */
+            .toast-container {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+            }
+            .toast {
+                font-size: 0.8rem;
+                padding: 0.75rem;
+            }
+        }
+
+        /* ===== RESPONSIVE: SMALL MOBILE (≤ 480px) ===== */
+        @media (max-width: 480px) {
+            header {
+                padding: 0.5rem 0.6rem;
+            }
+            .header-title h1 {
+                font-size: 0.85rem;
+            }
+            .privacy-note {
+                font-size: 0.6rem;
+                padding: 0.15rem 0.4rem;
+            }
+            .header-actions .btn span {
+                display: none;
+            }
+            .progress-container {
+                width: 100px;
+            }
+            .mobile-tabs button {
+                font-size: 0.7rem;
+                padding: 0.6rem 0.5rem;
+            }
+            .left-panel {
+                min-height: 250px;
+                max-height: 50vh;
+            }
+            .form-actions {
+                padding: 0.5rem;
+            }
+            .form-container {
+                padding: 0.5rem;
+            }
+            .accordion-header {
+                padding: 0.6rem;
+            }
+            .accordion-title {
+                font-size: 0.8rem;
+            }
+            input, select {
+                padding: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Sevk Verisi Giriş İstasyonu</h1>
+            <span class="privacy-note">🔒 Tamamen yerel — hiçbir veri dışarı gönderilmez</span>
+        </div>
+        <div class="header-actions">
+            <div class="progress-container">
+                <div class="progress-text"><span id="filled-count">0</span> / 88 alan dolduruldu</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-bar"></div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="exportToExcel()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Dışa Aktar (Ctrl+E)</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="mobile-tabs" id="mobile-tabs">
+        <button class="active" data-panel="pdf" onclick="switchMobilePanel('pdf')">📄 Belge</button>
+        <button data-panel="form" onclick="switchMobilePanel('form')">📋 Form</button>
+        <button data-panel="records" onclick="switchMobilePanel('records')">📊 Kayıtlar</button>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="pdf-upload-zone" id="drop-zone">
+                <div class="upload-icon">📄</div>
+                <h2>PDF Dosyasını Sürükleyin</h2>
+                <p style="margin-top:0.5rem; color:var(--text-secondary)">veya seçmek için tıklayın</p>
+                <input type="file" id="file-input" accept=".pdf" style="display:none">
+                <button class="btn btn-primary" style="margin-top:1rem" onclick="document.getElementById('file-input').click()">Dosya Seç</button>
+            </div>
+            <div class="pdf-viewer-container" id="pdf-viewer" style="display:none">
+                <!-- PDF rendered canvas goes here if needed, but we'll focus on text -->
+                <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                    PDF Yüklendi. Metin analizi yapıldı.
+                </div>
+            </div>
+            <div class="extracted-text-panel">
+                <div class="panel-header">
+                    <span>Çıkarılan Metin</span>
+                    <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="copySelectedText()">Seçileni Kopyala</button>
+                </div>
+                <div class="extracted-text-content" id="extracted-text">
+                    PDF yüklendiğinde metin burada görünecektir...
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="form-actions">
+                <button class="btn btn-warning" onclick="autoFillForm()">
+                    ✨ Otomatik Doldur
+                </button>
+                <button class="btn btn-primary" style="margin-left:auto" onclick="saveRecord()">
+                    💾 Kaydet (Ctrl+S)
+                </button>
+                <button class="btn btn-secondary" onclick="clearForm()">
+                    Temizle
+                </button>
+            </div>
+            <div class="form-container" id="form-container">
+                <!-- Form dynamically generated here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="panel-header">
+            <span>Kayıtlı Hastalar</span>
+            <span id="record-count" style="font-size:0.8rem; color:var(--text-secondary)">0 kayıt</span>
+        </div>
+        <div class="table-container">
+            <table id="records-table">
+                <thead>
+                    <tr>
+                        <th>TC Kimlik No</th>
+                        <th>Sevk Tarihi</th>
+                        <th>Sevk Tanısı</th>
+                        <th>Gönderen Kurum</th>
+                        <th>Alan Kurum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="records-tbody">
+                    <!-- Records go here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Libraries -->
+    <script type="module">
+        import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.1.200/pdf.min.mjs';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.1.200/pdf.worker.min.mjs';
+        window.pdfjsLib = pdfjsLib;
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        'use strict';
+
+        // ===== Mobile Panel Switching =====
+        function switchMobilePanel(panel) {
+            const leftPanel = document.querySelector('.left-panel');
+            const rightPanel = document.querySelector('.right-panel');
+            const bottomPanel = document.querySelector('.bottom-panel');
+            const tabs = document.querySelectorAll('.mobile-tabs button');
+
+            // Update tab active state
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.getAttribute('data-panel') === panel);
+            });
+
+            // Check if we're in mobile view
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile) return;
+
+            // Show/hide panels
+            if (panel === 'pdf') {
+                leftPanel.classList.remove('panel-hidden');
+                rightPanel.classList.add('panel-hidden');
+                bottomPanel.classList.add('panel-hidden');
+            } else if (panel === 'form') {
+                leftPanel.classList.add('panel-hidden');
+                rightPanel.classList.remove('panel-hidden');
+                bottomPanel.classList.add('panel-hidden');
+            } else if (panel === 'records') {
+                leftPanel.classList.add('panel-hidden');
+                rightPanel.classList.add('panel-hidden');
+                bottomPanel.classList.remove('panel-hidden');
+            }
+        }
+
+        // Reset panel visibility on resize
+        window.addEventListener('resize', function() {
+            const leftPanel = document.querySelector('.left-panel');
+            const rightPanel = document.querySelector('.right-panel');
+            const bottomPanel = document.querySelector('.bottom-panel');
+            
+            if (window.innerWidth > 768) {
+                // Desktop: show all panels
+                leftPanel.classList.remove('panel-hidden');
+                rightPanel.classList.remove('panel-hidden');
+                bottomPanel.classList.remove('panel-hidden');
+            } else {
+                // Mobile: apply current tab state
+                const activeTab = document.querySelector('.mobile-tabs button.active');
+                if (activeTab) {
+                    switchMobilePanel(activeTab.getAttribute('data-panel'));
+                }
+            }
+        });
+
+        // Initialize mobile state on load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth <= 768) {
+                switchMobilePanel('pdf');
+            }
+        });
+
+        // Data Definition
+        const CATEGORIES = [
+            { id: 1, name: "Demografik Bilgiler" },
+            { id: 2, name: "Zaman Bilgileri" },
+            { id: 3, name: "Gönderen Kurum Bilgileri" },
+            { id: 4, name: "Alan Kurum Bilgileri" },
+            { id: 5, name: "Tanı & Sevk Bilgileri" },
+            { id: 6, name: "Tetkik & Konsültasyon" },
+            { id: 7, name: "Sevk Öncesi Vital Bulgular" },
+            { id: 8, name: "Transfer Bilgileri" },
+            { id: 9, name: "Kabul Sırası Vital Bulgular" },
+            { id: 10, name: "Sonuç & Değerlendirme" },
+            { id: 11, name: "Skorlar" }
+        ];
+
+        const FIELDS = [
+            // Cat 1
+            { id: "f1", cat: 1, type: "number", label: "TC Kimlik No", excel: "TC Kimlik No" },
+            { id: "f2", cat: 1, type: "number", label: "Yaş", excel: "Yaş" },
+            { id: "f3", cat: 1, type: "select", label: "Cinsiyet", excel: "Cinsiyet", opts: [{v:1,t:"Erkek"},{v:2,t:"Kadın"}] },
+            // Cat 2
+            { id: "f4", cat: 2, type: "text", label: "Sevk Tarihi (gg.aa.yyyy)", excel: "Sevk Tarihi" },
+            { id: "f5", cat: 2, type: "time", label: "Sevk Saati", excel: "Sevk Saati" },
+            { id: "f6", cat: 2, type: "time", label: "Kabul Saati", excel: "Kabul Saati" },
+            { id: "f7", cat: 2, type: "select", label: "Sevk Gün Tipi", excel: "Sevk Gün Tipi", opts: [{v:1,t:"Hafta içi"},{v:2,t:"Haftasonu"}] },
+            { id: "f8", cat: 2, type: "select", label: "Mesai Durumu", excel: "Mesai Durumu", opts: [{v:1,t:"Mesai"},{v:2,t:"Mesai dışı"}] },
+            // Cat 3
+            { id: "f9", cat: 3, type: "select", label: "Gönderen kurum basamağı", excel: "Gönderen kurum basamağı", opts: [{v:1,t:"1.basamak"},{v:2,t:"2.basamak"},{v:3,t:"3.basamak"}] },
+            { id: "f10", cat: 3, type: "select", label: "Gönderen Birim", excel: "Gönderen Birim", opts: [{v:1,t:"Acil servis"},{v:2,t:"Yoğun bakım"},{v:3,t:"Servis"},{v:4,t:"Diğer"}] },
+            { id: "f11", cat: 3, type: "select", label: "Gönderen kurumda ybu var mı?", excel: "Gönderen kurumda ybu var mı?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f12", cat: 3, type: "select", label: "Gönderen kurumda BT Var mı?", excel: "Gönderen kurumda BT Var mı?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f13", cat: 3, type: "select", label: "Gönderen kurumda mrg var mı?", excel: "Gönderen kurumda mrg var mı?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f14", cat: 3, type: "select", label: "Gönderen kurumda anjiyo ünitesi var mı?", excel: "Gönderen kurumda anjiyo ünitesi var mı?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            // Cat 4
+            { id: "f15", cat: 4, type: "select", label: "Alan kurumun basamağı", excel: "Alan kurumun basamağı", opts: [{v:1,t:"1.basamak"},{v:2,t:"2.basamak"},{v:3,t:"3.basamak"}] },
+            { id: "f16", cat: 4, type: "select", label: "Alan birim", excel: "Alan birim", opts: [{v:1,t:"Acil servis"},{v:2,t:"Yoğun bakım"},{v:3,t:"Servis"},{v:4,t:"Diğer"}] },
+            { id: "f17", cat: 4, type: "select", label: "Kabul eden birim", excel: "Kabul eden birim", opts: [{v:1,t:"Acil servis"},{v:2,t:"Yoğun bakım"},{v:3,t:"Servis"},{v:4,t:"Diğer"},{v:5,t:"Kabul eden birim yok"}] },
+            // Cat 5
+            { id: "f18", cat: 5, type: "text", label: "Sevk tanısı ( yazıyla )", excel: "Sevk tanısı ( yazıyla ) ", full: true },
+            { id: "f19", cat: 5, type: "text", label: "Sevk tanısı ( ICD10 kodu )", excel: "Sevk tanısı ( ICD10 kodu )" },
+            { id: "f20", cat: 5, type: "select", label: "Gönderen birimin sevk endikasyonu", excel: "Gönderen birimin sevk endikasyonu", opts: [{v:1,t:"İleri tetkik"},{v:2,t:"YBÜ"},{v:3,t:"Cerrahi"},{v:4,t:"Branş eksikliği"},{v:5,t:"Ekipman eksikliği"},{v:6,t:"Hasta isteği"},{v:7,t:"Hekim Tercihi"},{v:8,t:"Diğer"}] },
+            { id: "f21", cat: 5, type: "text", label: "Sevk nedeni ( yazıyla )", excel: "Sevk nedeni ( yazıyla )", full: true },
+            { id: "f22", cat: 5, type: "select", label: "Sevk için hedeflenen branş", excel: "Sevk için hedeflenen branş", opts: [{v:1,t:"ACİL"},{v:2,t:"Kardiyoloji"},{v:3,t:"Nöroloji"},{v:4,t:"Yoğun bakım ünitesi"},{v:6,t:"Travma/Cerrahi"},{v:7,t:"Diğer"}] },
+            { id: "f23", cat: 5, type: "select", label: "Sevk eden hekim kıdem", excel: "Sevk eden hekim branşı", opts: [{v:1,t:"Pratisyen"},{v:2,t:"Acil uzmanı"},{v:3,t:"Anadal Uzmanı"},{v:4,t:"Yandal uzmanı"},{v:5,t:"Diğer"}] },
+            { id: "f24", cat: 5, type: "select", label: "Sevk kararı hekimin branşı", excel: "Sevk kararı hekimin branşı", opts: [{v:1,t:"Pratisyen"},{v:2,t:"Acil uzmanı"},{v:3,t:"Anadal Uzmanı"},{v:4,t:"Yandal uzmanı"},{v:5,t:"Diğer"}] },
+            // Cat 6
+            { id: "f25", cat: 6, type: "select", label: "BT yapıldı mı ?", excel: "BT yapıldı mı ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f26", cat: 6, type: "select", label: "USG yapıldı mı ?", excel: "USG yapıldı mı ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f27", cat: 6, type: "select", label: "Röntgen yapıldı mı ?", excel: "Röntgen yapıldı mı ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f28", cat: 6, type: "select", label: "Lab tetkiki yapıldı mı ?", excel: "Lab tetkiki yapıldı mı  ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f29", cat: 6, type: "select", label: "Patolojik bulgu var mı ?", excel: "Patolojik bulgu var mı ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f30", cat: 6, type: "select", label: "Sevk öncesi uygun konsültasyon yapıldı mı ?", excel: "Sevk öncesi uygun konsültasyon yapıldı mı ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f31", cat: 6, type: "select", label: "Sistem sonuç paylaşımı var mı ?", excel: "Sistem sonuç paylaşımı var mı ? ", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f32", cat: 6, type: "select", label: "Alıcı merkeze bilgi verildi mi ?", excel: "Alıcı merkeze bilgi verildi mi ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f33", cat: 6, type: "select", label: "Hasta bir birim tarafından kabul edildi mi ?", excel: "Hasta bir birim tarafından kabul edildi mi ?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f34", cat: 6, type: "select", label: "Yatak teyidi yapıldı mı ?", excel: "Yatak teyidi yapıldı mı ? ", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            // Cat 7
+            { id: "f35", cat: 7, type: "number", label: "Sistolik KB / sevk öncesi (mmHg)", excel: "Sistolik kan basıncı / sevk öncesi " },
+            { id: "f36", cat: 7, type: "number", label: "Diyastolik KB / sevk öncesi (mmHg)", excel: "Diyastolik kan basıncı / sevk öncesi" },
+            { id: "f37", cat: 7, type: "number", label: "Ortalama arteriyel basınç (mmHg)", excel: "Ortalama arteriyel basınç / sevk öncesi" },
+            { id: "f38", cat: 7, type: "number", label: "SpO2 / sevk öncesi (%)", excel: "SpO2 / sevk öncesi" },
+            { id: "f39", cat: 7, type: "number", label: "Kalp hızı / sevk öncesi (nabız/dk)", excel: "Kalp hızı / sevk öncesi" },
+            { id: "f40", cat: 7, type: "number", label: "Solunum sayısı / sevk öncesi", excel: "Solunum sayısı / sevk öncesi" },
+            { id: "f41", cat: 7, type: "number", label: "Vücut ısısı / sevk öncesi (°C)", excel: "Vücut ısısı / sevk öncesi", step: "0.1" },
+            { id: "f42", cat: 7, type: "select", label: "Bilinç durumu ( AVPU )", excel: "Bilinç durumu ( AVPU ) / sevk öncesi", opts: [{v:1,t:"Alert"},{v:2,t:"Verbal"},{v:3,t:"Pain"},{v:4,t:"Unresponsive"}] },
+            { id: "f43", cat: 7, type: "number", label: "Glasgow Koma Skoru (3-15)", excel: "Glasgow Koma Skoru / sevk öncesi " },
+            { id: "f44", cat: 7, type: "select", label: "Ventilasyon / sevk öncesi", excel: "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / sevk öncesi", opts: [{v:0,t:"Spontan"},{v:1,t:"O2"},{v:2,t:"NIMV"},{v:3,t:"MV"}] },
+            { id: "f45", cat: 7, type: "number", label: "Hemoglobin", excel: "Hemoglobin / sevk öncesi", step: "0.1" },
+            { id: "f46", cat: 7, type: "number", label: "Kan gazı pH", excel: "Kan gazı pH / sevk öncesi", step: "0.01" },
+            { id: "f47", cat: 7, type: "select", label: "Vazopressör desteği", excel: "Vazopressör desteği / sevk öncesi", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f48", cat: 7, type: "select", label: "Uygun IV tedavi verilmiş mi?", excel: "Uygun intravenöz tedavi verilmiş mi? ( analjezi/antibiyotik/sıvı )", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            // Cat 8
+            { id: "f49", cat: 8, type: "select", label: "Transfer aracı", excel: "Transfer aracı ", opts: [{v:1,t:"ALS"},{v:2,t:"BLS"}] },
+            { id: "f50", cat: 8, type: "select", label: "Transfer yolu", excel: "Transfer yolu", opts: [{v:1,t:"Kara"},{v:2,t:"Hava"}] },
+            { id: "f51", cat: 8, type: "select", label: "Ambulans ekibi", excel: "Ambulans ekibi", opts: [{v:1,t:"ATT"},{v:2,t:"Paramedik"},{v:3,t:"Doktorlu Ekip"}] },
+            { id: "f52", cat: 8, type: "number", label: "Transfer süresi / dakika", excel: "Transfer süresi / dakika" },
+            { id: "f53", cat: 8, type: "number", label: "Transfer mesafesi / kilometre", excel: "Transfer mesafesi / kilometre" },
+            { id: "f54", cat: 8, type: "select", label: "Transfer sırasında kötüleşme var mı ?", excel: "Transfer sırasında kötüleşme var mı ?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f55", cat: 8, type: "select", label: "Transfer sırasında CPR gerekti mi ?", excel: "Transfer sırasında CPR gerekti mi ? ", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f56", cat: 8, type: "select", label: "Transfer sırasında entübasyon gerekti mi ?", excel: "Transfer sırasında entübasyon gerekti mi ?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f57", cat: 8, type: "select", label: "Transfer sırasında vazopressör ihtiyacı gelişti mi?", excel: "Transfer sırasında vazopressör ihtiyacı gelişti mi?", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            // Cat 9
+            { id: "f58", cat: 9, type: "number", label: "Sistolik KB / kabul (mmHg)", excel: "Sistolik kan basıncı / hedef hastane kabul sırasında" },
+            { id: "f59", cat: 9, type: "number", label: "Diyastolik KB / kabul (mmHg)", excel: "Diyastolik kan basıncı / hedef hastane kabul sırasında" },
+            { id: "f60", cat: 9, type: "number", label: "Ortalama arteriyel basınç / kabul", excel: "Ortalama arteriyel basınç / hedef hastane kabul sırasında" },
+            { id: "f61", cat: 9, type: "number", label: "SpO2 / kabul (%)", excel: "SpO2 / hedef hastane kabul sırasında" },
+            { id: "f62", cat: 9, type: "number", label: "Kalp hızı / kabul", excel: "Kalp hızı / hedef hastane kabul sırasında" },
+            { id: "f63", cat: 9, type: "number", label: "Solunum sayısı / kabul", excel: "Solunum sayısı / hedef hastane kabul sırasında" },
+            { id: "f64", cat: 9, type: "number", label: "Vücut ısısı / kabul (°C)", excel: "Vücut ısısı / hedef hastane kabul sırasında", step: "0.1" },
+            { id: "f65", cat: 9, type: "select", label: "Bilinç durumu ( AVPU ) / kabul", excel: "Bilinç durumu ( AVPU ) / hedef hastane kabul sırasında", opts: [{v:1,t:"Alert"},{v:2,t:"Verbal"},{v:3,t:"Pain"},{v:4,t:"Unresponsive"}] },
+            { id: "f66", cat: 9, type: "number", label: "Glasgow koma skoru / kabul", excel: "Glasgow koma skoru / hedef hastane kabul sırasında" },
+            { id: "f67", cat: 9, type: "select", label: "Ventilasyon / kabul", excel: "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / hedef hastane kabul sırasında", opts: [{v:0,t:"Spontan"},{v:1,t:"O2"},{v:2,t:"NIMV"},{v:3,t:"MV"}] },
+            { id: "f68", cat: 9, type: "number", label: "Hemoglobin / kabul", excel: "Hemoglobin / hedef hastane kabul sırasında", step: "0.1" },
+            { id: "f69", cat: 9, type: "number", label: "Kan gazı pH / kabul", excel: "Kan gazı pH / hedef hastane kabul sırasında", step: "0.01" },
+            { id: "f70", cat: 9, type: "number", label: "Laktat / kabul", excel: "Laktat / hedef hastane kabul sırasında", step: "0.1" },
+            // Cat 10
+            { id: "f71", cat: 10, type: "select", label: "Entübasyon / teslimden sonra ilk 6 saat", excel: "Entübasyon / teslimden sonra ilk 6 saat", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f72", cat: 10, type: "select", label: "Acil girişim / ilk 6 saat", excel: " Acil girişim / teslimden sonra ilk 6 saat", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f73", cat: 10, type: "select", label: "Mortalite / ilk 6 saat", excel: "Mortalite / teslimden sonra ilk 6 saat", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f74", cat: 10, type: "select", label: "Mortalite / 24 saat", excel: "Mortalite / 24 saat", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f75", cat: 10, type: "select", label: "Acil servis sonlanımı", excel: "Acil servis sonlanımı", opts: [{v:1,t:"Taburcu"},{v:2,t:"Yatış"},{v:3,t:"Kendi isteğiyle ayrılış"},{v:4,t:"Mortalite"}] },
+            { id: "f76", cat: 10, type: "select", label: "Yoğun bakım yatış", excel: "Yoğun bakım yatış", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"}] },
+            { id: "f77", cat: 10, type: "select", label: "Geri Sevk / 24 saat", excel: "Geri Sevk / 24 saat", opts: [{v:0,t:"Yok"},{v:1,t:"Var"}] },
+            { id: "f78", cat: 10, type: "text", label: "Son tanı / kabul birimi", excel: "Son tanı / kabul birimi ( yazıyla )", full: true },
+            { id: "f79", cat: 10, type: "text", label: "ICD10 tanı kodu / kabul birimi", excel: "ICD10 tanı kodu / kabul birimi" },
+            { id: "f80", cat: 10, type: "select", label: "ilk ve son tanı uyumu", excel: "ilk ve son tanı uyumu ", opts: [{v:0,t:"Uyumsuz"},{v:1,t:"Kısmen"},{v:2,t:"Uyumlu"}] },
+            { id: "f81", cat: 10, type: "select", label: "Dökümantasyon Tam mı?", excel: "Dökümantasyon Tam mı?", opts: [{v:0,t:"Hayır"},{v:1,t:"Evet"},{v:2,t:"Kısmi"}] },
+            { id: "f82", cat: 10, type: "select", label: "Önlenebilirlik", excel: "Önlenebilirlik", opts: [{v:1,t:"Asla"},{v:2,t:"2"},{v:3,t:"3"},{v:4,t:"4"},{v:5,t:"Kesinlikle önlenebilir"}] },
+            { id: "f83", cat: 10, type: "text", label: "Uzman Değerlendirme", excel: "Uzman Değerlendirme ", full: true },
+            { id: "f84", cat: 10, type: "text", label: "Değerlendiren Hekim", excel: "Değerlendiren Hekim " },
+            // Cat 11
+            { id: "f85", cat: 11, type: "number", label: "qSOFA", excel: "qSOFA" },
+            { id: "f86", cat: 11, type: "number", label: "VACA", excel: "VACA" },
+            { id: "f87", cat: 11, type: "number", label: "RSTP", excel: "RSTP" },
+            { id: "f88", cat: 11, type: "number", label: "MEWS", excel: "MEWS" }
+        ];
+
+        let parsedPdfText = "";
+        let patients = JSON.parse(localStorage.getItem('sevk_patients')) || [];
+
+        // UI Initialization
+        function initForm() {
+            const container = document.getElementById('form-container');
+            
+            CATEGORIES.forEach(cat => {
+                const catFields = FIELDS.filter(f => f.cat === cat.id);
+                if(catFields.length === 0) return;
+
+                const accordion = document.createElement('div');
+                accordion.className = 'accordion-item';
+                if(cat.id === 1) accordion.classList.add('active'); // Open first by default
+
+                accordion.innerHTML = `
+                    <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <div class="accordion-title">${cat.id}. ${cat.name}</div>
+                        <div class="accordion-status"><span class="cat-filled">0</span> / ${catFields.length} dolu</div>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="form-grid"></div>
+                    </div>
+                `;
+
+                const grid = accordion.querySelector('.form-grid');
+
+                catFields.forEach(field => {
+                    const group = document.createElement('div');
+                    group.className = 'field-group';
+                    if (field.full) group.classList.add('full-width');
+
+                    let inputHtml = '';
+                    if (field.type === 'select') {
+                        let optsHtml = '<option value="">Seçiniz...</option>';
+                        field.opts.forEach(opt => {
+                            optsHtml += `<option value="${opt.v}">${opt.t}</option>`;
+                        });
+                        inputHtml = `<select id="${field.id}" onchange="updateProgress()">${optsHtml}</select>`;
+                    } else {
+                        const stepAttr = field.step ? `step="${field.step}"` : '';
+                        inputHtml = `<input type="${field.type}" id="${field.id}" ${stepAttr} oninput="updateProgress()" autocomplete="off">`;
+                    }
+
+                    group.innerHTML = `
+                        <label for="${field.id}">${field.label}</label>
+                        ${inputHtml}
+                    `;
+                    grid.appendChild(group);
+                });
+
+                container.appendChild(accordion);
+            });
+
+            updateProgress();
+            renderTable();
+        }
+
+        function updateProgress() {
+            let filledCount = 0;
+            CATEGORIES.forEach((cat, index) => {
+                const catFields = FIELDS.filter(f => f.cat === cat.id);
+                let catFilled = 0;
+                
+                catFields.forEach(field => {
+                    const el = document.getElementById(field.id);
+                    if(el && el.value.trim() !== '') {
+                        filledCount++;
+                        catFilled++;
+                    }
+                });
+
+                const accordions = document.querySelectorAll('.accordion-item');
+                if(accordions[index]) {
+                    const statusSpan = accordions[index].querySelector('.cat-filled');
+                    if(statusSpan) statusSpan.textContent = catFilled;
+                }
+            });
+
+            document.getElementById('filled-count').textContent = filledCount;
+            const percentage = (filledCount / FIELDS.length) * 100;
+            document.getElementById('progress-bar').style.width = percentage + '%';
+            
+            if(percentage === 100) {
+                document.getElementById('progress-bar').style.background = 'var(--success)';
+            } else {
+                document.getElementById('progress-bar').style.background = 'var(--primary)';
+            }
+        }
+
+        function showToast(msg, type='success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = '✅';
+            if(type==='error') icon = '❌';
+            if(type==='warning') icon = '⚠️';
+            
+            toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', e => {
+            if(e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveRecord();
+            }
+            if(e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                exportToExcel();
+            }
+        });
+
+        // PDF Handling
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if(e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', e => {
+            if(e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        async function handleFile(file) {
+            if(file.type !== 'application/pdf') {
+                showToast('Lütfen geçerli bir PDF dosyası yükleyin.', 'error');
+                return;
+            }
+
+            dropZone.classList.add('hidden');
+            document.getElementById('pdf-viewer').style.display = 'block';
+            document.getElementById('extracted-text').textContent = "PDF ayrıştırılıyor, lütfen bekleyin...";
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await window.pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                let fullText = '';
+                
+                for(let i=1; i<=pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+
+                parsedPdfText = fullText;
+                document.getElementById('extracted-text').textContent = fullText;
+                showToast('PDF metni başarıyla çıkarıldı.');
+                
+            } catch(err) {
+                console.error(err);
+                showToast('PDF okunurken bir hata oluştu.', 'error');
+                dropZone.classList.remove('hidden');
+            }
+        }
+
+        function copySelectedText() {
+            const selection = window.getSelection().toString();
+            if(selection) {
+                navigator.clipboard.writeText(selection).then(() => {
+                    showToast('Seçili metin kopyalandı.');
+                });
+            } else {
+                showToast('Kopyalanacak metin seçilmedi.', 'warning');
+            }
+        }
+
+        // Smart Parsing Engine
+        function autoFillForm() {
+            if(!parsedPdfText) {
+                showToast('Önce bir PDF yüklemelisiniz.', 'warning');
+                return;
+            }
+
+            const rawText = parsedPdfText;
+            const text = rawText.replace(/\s+/g, ' ').trim();
+            let filledCount = 0;
+
+            function setVal(fieldId, value) {
+                if (value === null || value === undefined || String(value).trim() === '') return;
+                const el = document.getElementById(fieldId);
+                if (!el) return;
+                if (el.value && el.value.trim() !== '') return;
+                el.value = String(value).trim();
+                el.classList.add('auto-filled');
+                setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                filledCount++;
+            }
+
+            // ===== 1. TC KİMLİK NO =====
+            // Note: TC Kimlik No is 11 digits and NEVER starts with 0 (phone numbers start with 05xx)
+            let tc = null;
+            
+            // Direct regex for TC Kimlik No label followed by 11-digit number starting with 1-9
+            const tcMatch = text.match(/(?:TC\s*Kimlik\s*(?:No|Numaras[ıi])?|TCKN|T\.?C\.?)\s*[:\-]?\s*([1-9]\d{10})\b/i);
+            if (tcMatch) {
+                tc = tcMatch[1];
+            } else {
+                // Look for any 11-digit number starting with 1-9 (excluding 05xx phone numbers)
+                const all11DigitNums = text.match(/\b([1-9]\d{10})\b/g);
+                if (all11DigitNums && all11DigitNums.length > 0) {
+                    // Pick the first one that is NOT a phone number (phone numbers often start with 0, but if missing leading zero check if 5xx)
+                    const candidate = all11DigitNums.find(n => !n.startsWith('0') && !n.startsWith('50') && !n.startsWith('53') && !n.startsWith('54') && !n.startsWith('55'));
+                    if (candidate) tc = candidate;
+                    else tc = all11DigitNums[0];
+                }
+            }
+            if (tc) setVal('f1', tc);
+
+            // ===== 2. YAŞ =====
+            let yas = null;
+            const yasMatch = text.match(/(?:Yaş|yaş|Yashi|Y:)\s*[:\-]?\s*(\d{1,3})\b/i);
+            if (yasMatch) {
+                const yVal = parseInt(yasMatch[1]);
+                if (yVal > 0 && yVal < 120) yas = String(yVal);
+            }
+            
+            // Calculate age from Doğum Tarihi if age not directly found
+            if (!yas) {
+                const dtMatch = text.match(/(?:Doğum\s*Tarihi|D\.?\s*Tarihi|Dogum\s*Tarihi)\s*[:\-]?\s*(\d{2})[\.\/-](\d{2})[\.\/-](\d{4})/i);
+                if (dtMatch) {
+                    const d = parseInt(dtMatch[1]), m = parseInt(dtMatch[2]), y = parseInt(dtMatch[3]);
+                    const birthDate = new Date(y, m - 1, d);
+                    const now = new Date();
+                    let calcAge = now.getFullYear() - birthDate.getFullYear();
+                    if (now.getMonth() < birthDate.getMonth() || (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate())) {
+                        calcAge--;
+                    }
+                    if (calcAge >= 0 && calcAge < 120) yas = String(calcAge);
+                }
+            }
+            if (yas) setVal('f2', yas);
+
+            // ===== 3. CİNSİYET =====
+            const cinsiyetMatch = text.match(/(?:Cinsiyet|Cinsiyeti)\s*[:\-]?\s*(Erkek|Kadın|E|K)\b/i);
+            if (cinsiyetMatch) {
+                const val = cinsiyetMatch[1].toUpperCase();
+                if (val === 'ERKEK' || val === 'E') setVal('f3', '1');
+                else if (val === 'KADIN' || val === 'K') setVal('f3', '2');
+            } else {
+                if (/\b(?:Erkek|ERKEK|Bay)\b/.test(text)) setVal('f3', '1');
+                else if (/\b(?:Kadın|KADIN|Bayan)\b/.test(text)) setVal('f3', '2');
+            }
+
+            // ===== 4. SEVK / BAŞVURU TARİHİ =====
+            // Strictly match Sevk Tarihi, Başvuru Tarihi, Transfer Tarihi, Kabul Tarihi (exclude Doğum Tarihi!)
+            let tarih = null;
+            const sevkTarihiMatch = text.match(/(?:Sevk\s*Tarihi|Başvuru\s*Tarihi|Transfer\s*Tarihi|Kabul\s*Tarihi|Giriş\s*Tarihi)\s*[:\-]?\s*(\d{2}[\.\/-]\d{2}[\.\/-]\d{4})/i);
+            if (sevkTarihiMatch) {
+                tarih = sevkTarihiMatch[1];
+            } else {
+                // If not found with label, look for date that is NOT preceded by "Doğum"
+                const dates = text.matchAll(/(\d{2})[\.\/-](\d{2})[\.\/-](\d{4})/g);
+                for (const dMatch of dates) {
+                    const matchIndex = dMatch.index;
+                    const precedingText = text.substring(Math.max(0, matchIndex - 20), matchIndex);
+                    if (!/Doğum|Dogum|D\.Tarihi/i.test(precedingText)) {
+                        tarih = dMatch[0];
+                        break;
+                    }
+                }
+            }
+            if (tarih) {
+                tarih = tarih.replace(/[\/-]/g, '.');
+                setVal('f4', tarih);
+            }
+
+            // ===== 5. SEVK SAATİ / KABUL SAATİ =====
+            const sevkSaatiMatch = text.match(/(?:Sevk\s*Saati|Başvuru\s*Saati|Giriş\s*Saati|112\s*Saat)\s*[:\-]?\s*(\d{2}[:\.]\d{2})/i);
+            if (sevkSaatiMatch) {
+                setVal('f5', sevkSaatiMatch[1].replace('.', ':'));
+            }
+            const kabulSaatiMatch = text.match(/(?:Kabul\s*Saati|Teslim\s*Saati)\s*[:\-]?\s*(\d{2}[:\.]\d{2})/i);
+            if (kabulSaatiMatch) {
+                setVal('f6', kabulSaatiMatch[1].replace('.', ':'));
+            }
+
+            // ===== 6. SEVK TANISI (Yazıyla & ICD-10) =====
+            // ICD-10 Code search (e.g., R07.4, I21.9, W13)
+            const icdMatch = text.match(/(?:ICD|icd|Tanı\s*Kodu|ICD10)\s*[:\-]?\s*([A-Z]\d{2}(?:\.\d{1,2})?)/i) || text.match(/\b([A-Z]\d{2}\.\d{1,2})\b/);
+            if (icdMatch) {
+                setVal('f19', icdMatch[1]);
+                setVal('f79', icdMatch[1]);
+            }
+
+            // Diagnosis free text
+            const taniMatch = text.match(/(?:Sevk\s*Tan[ıi]s[ıi]|Ön\s*Tan[ıi]|Ana\s*Tan[ıi]|Tan[ıi]|Teşhis)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü0-9\s\.\,\-\(\)\/]{3,60})/i);
+            if (taniMatch) {
+                // Clean up any trailing label keywords if pulled
+                let cleanTani = taniMatch[1].split(/(?:ICD|Başvuru|Sevk|Doktor|Hekim|Tarih|Hasta)/i)[0].trim();
+                if (cleanTani.length > 2) {
+                    setVal('f18', cleanTani);
+                    setVal('f78', cleanTani);
+                }
+            }
+
+            // ===== 7. KAN BASINCI (TA - Sistolik / Diyastolik) =====
+            const taPatterns = [
+                /(?:TA|Tansiyon|Kan\s*Basıncı|Arter[iy]el)\s*[:\-]?\s*(\d{2,3})\s*[\/\\]\s*(\d{2,3})/i,
+                /(?:Sistolik|SKB)\s*[:\-]?\s*(\d{2,3})\s*.*?(?:Diyastolik|DKB)\s*[:\-]?\s*(\d{2,3})/i,
+                /(\d{2,3})\s*\/\s*(\d{2,3})\s*(?:mmHg|mm\s*Hg)/i,
+            ];
+            for (const p of taPatterns) {
+                const m = text.match(p);
+                if (m) {
+                    const sys = parseInt(m[1]), dia = parseInt(m[2]);
+                    if (sys >= 50 && sys <= 300 && dia >= 20 && dia <= 200) {
+                        setVal('f35', String(sys));
+                        setVal('f36', String(dia));
+                        const map = Math.round((sys + 2 * dia) / 3);
+                        setVal('f37', String(map));
+                        break;
+                    }
+                }
+            }
+
+            // ===== 8. SpO2 =====
+            const spo2Match = text.match(/(?:SpO2|SPO2|Spo2|Saturasyon|O2\s*Sat|SaO2)\s*[:\-]?\s*%?\s*(\d{2,3})\s*%?/i);
+            if (spo2Match && parseInt(spo2Match[1]) >= 50 && parseInt(spo2Match[1]) <= 100) {
+                setVal('f38', spo2Match[1]);
+            }
+
+            // ===== 9. NABIZ / KALP HIZI =====
+            const nabizMatch = text.match(/(?:Nabız|Nab[ıi]z|Kalp\s*H[ıi]z[ıi]|KH|Pulse|HR)\s*[:\-]?\s*(\d{2,3})\s*(?:\/dk|\/min|dk|bpm)?/i);
+            if (nabizMatch && parseInt(nabizMatch[1]) >= 20 && parseInt(nabizMatch[1]) <= 250) {
+                setVal('f39', nabizMatch[1]);
+            }
+
+            // ===== 10. SOLUNUM SAYISI =====
+            const ssMatch = text.match(/(?:Solunum\s*(?:Say[ıi]s[ıi])?|SS|RR|Resp)\s*[:\-]?\s*(\d{1,2})\s*(?:\/dk|\/min)?/i);
+            if (ssMatch && parseInt(ssMatch[1]) >= 6 && parseInt(ssMatch[1]) <= 60) {
+                setVal('f40', ssMatch[1]);
+            }
+
+            // ===== 11. VÜCUT ISISI (ATEŞ) =====
+            const atesMatch = text.match(/(?:Ateş|Is[ıi]|Vücut\s*[Iı]s[ıi]s[ıi]|Temp|T°)\s*[:\-]?\s*(\d{2}[\.,]\d{1})\s*°?C?/i) || text.match(/(?:Ateş|Is[ıi])\s*[:\-]?\s*(\d{2})\s*°?C/i);
+            if (atesMatch) {
+                const temp = parseFloat(atesMatch[1].replace(',', '.'));
+                if (temp >= 34 && temp <= 42) setVal('f41', atesMatch[1].replace(',', '.'));
+            }
+
+            // ===== 12. GKS =====
+            const gksMatch = text.match(/(?:GKS|GCS|Glasgow)\s*[:\-]?\s*(\d{1,2})(?:\s*\/\s*15)?/i);
+            if (gksMatch && parseInt(gksMatch[1]) >= 3 && parseInt(gksMatch[1]) <= 15) {
+                setVal('f43', gksMatch[1]);
+            }
+
+            // ===== 13. AVPU =====
+            if (/\b(?:Alert|Uyanık|Bilinç\s*açık)\b/i.test(text)) setVal('f42', '1');
+            else if (/\b(?:Verbal|Sözel)\b/i.test(text)) setVal('f42', '2');
+            else if (/\b(?:Pain|Ağrı)\b/i.test(text)) setVal('f42', '3');
+            else if (/\b(?:Unresponsive|Yanıtsız|Bilinçsiz)\b/i.test(text)) setVal('f42', '4');
+
+            // ===== 14. LAB VALUES =====
+            const hbMatch = text.match(/(?:Hemoglobin|Hgb|Hb)\s*[:\-]?\s*(\d{1,2}[\.,]\d{1,2})/i);
+            if (hbMatch && parseFloat(hbMatch[1].replace(',', '.')) <= 25) setVal('f45', hbMatch[1].replace(',', '.'));
+
+            const phMatch = text.match(/(?:pH)\s*[:\-]?\s*(\d{1}[\.,]\d{2,3})/i);
+            if (phMatch && parseFloat(phMatch[1].replace(',', '.')) >= 6.5) setVal('f46', phMatch[1].replace(',', '.'));
+
+            const lacMatch = text.match(/(?:Laktat|Lactate)\s*[:\-]?\s*(\d{1,2}[\.,]\d{1,2})/i);
+            if (lacMatch) setVal('f70', lacMatch[1].replace(',', '.'));
+
+            // ===== 15. TETKİKLER =====
+            if (/(?:BT\s|Tomografi|bilgisayarlı\s*tomografi)/i.test(text)) setVal('f25', '1');
+            if (/(?:USG|Ultrason|ultrasonografi)/i.test(text)) setVal('f26', '1');
+            if (/(?:Röntgen|Grafi|X[\-\s]?ray|direkt\s*grafi)/i.test(text)) setVal('f27', '1');
+            if (/(?:Laboratuvar|Lab\b|Tetkik|kan\s*tetkik)/i.test(text)) setVal('f28', '1');
+
+            // ===== 16. BÖLÜM & KURUM =====
+            const bolumMatch = text.match(/(?:Bölüm|Birim|Klinik|Servis)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,30})/i);
+            if (bolumMatch) {
+                const b = bolumMatch[1].toLowerCase();
+                if (/acil/i.test(b)) setVal('f10', '1');
+                else if (/yoğun\s*bakım|ybü|ybu/i.test(b)) setVal('f10', '2');
+                else setVal('f10', '3');
+            }
+
+            const kurumMatch = text.match(/(?:Kurum|Hastane)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü0-9\s\.\,]{3,50})/i);
+            if (kurumMatch) {
+                const k = kurumMatch[1].toLowerCase();
+                if (/üniversite|eğitim.*araştırma|şehir\s*hastanesi/i.test(k)) setVal('f9', '3');
+                else if (/devlet\s*hastanesi|ilçe/i.test(k)) setVal('f9', '2');
+                else if (/aile|ASM|sağlık\s*ocağı|1\.\s*basamak/i.test(k)) setVal('f9', '1');
+            }
+
+            // ===== FINALIZE =====
+            updateProgress();
+            
+            if(filledCount > 0) {
+                showToast(`${filledCount} alan otomatik dolduruldu! Sarı alanları kontrol edin.`, 'success');
+                document.querySelectorAll('.accordion-item').forEach(acc => acc.classList.add('active'));
+            } else {
+                showToast('Otomatik eşleşme bulunamadı. Metin yapısı tanınmadı.', 'warning');
+            }
+        }
+
+        // Data Management
+        function getFormData() {
+            const data = {};
+            FIELDS.forEach(f => {
+                const val = document.getElementById(f.id).value;
+                // Save numeric value for selects/numbers, otherwise string
+                if(val === '') {
+                    data[f.excel] = '';
+                } else {
+                    if(f.type === 'number' || f.type === 'select') {
+                        data[f.excel] = Number(val);
+                    } else {
+                        data[f.excel] = val;
+                    }
+                }
+            });
+            return data;
+        }
+
+        function saveRecord() {
+            const data = getFormData();
+            if(!data["TC Kimlik No"]) {
+                showToast('TC Kimlik No zorunludur!', 'error');
+                return;
+            }
+
+            const existingIndex = patients.findIndex(p => p["TC Kimlik No"] === data["TC Kimlik No"]);
+            if(existingIndex >= 0) {
+                patients[existingIndex] = data;
+                showToast('Kayıt güncellendi.');
+            } else {
+                patients.push(data);
+                showToast('Kayıt eklendi.');
+            }
+
+            localStorage.setItem('sevk_patients', JSON.stringify(patients));
+            renderTable();
+            clearForm();
+        }
+
+        function clearForm() {
+            FIELDS.forEach(f => {
+                document.getElementById(f.id).value = '';
+            });
+            updateProgress();
+            parsedPdfText = '';
+            document.getElementById('extracted-text').textContent = 'PDF yüklendiğinde metin burada görünecektir...';
+            document.getElementById('pdf-viewer').style.display = 'none';
+            dropZone.classList.remove('hidden');
+            fileInput.value = '';
+        }
+
+        function deleteRecord(tc) {
+            if(confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
+                patients = patients.filter(p => p["TC Kimlik No"] !== tc);
+                localStorage.setItem('sevk_patients', JSON.stringify(patients));
+                renderTable();
+                showToast('Kayıt silindi.');
+            }
+        }
+
+        function loadRecord(tc) {
+            const p = patients.find(x => x["TC Kimlik No"] === tc);
+            if(p) {
+                FIELDS.forEach(f => {
+                    if(p[f.excel] !== undefined) {
+                        document.getElementById(f.id).value = p[f.excel];
+                    }
+                });
+                updateProgress();
+                showToast('Kayıt forma yüklendi.');
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('records-tbody');
+            tbody.innerHTML = '';
+            document.getElementById('record-count').textContent = `${patients.length} kayıt`;
+
+            patients.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p["TC Kimlik No"] || '-'}</td>
+                    <td>${p["Sevk Tarihi"] || '-'}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${p["Sevk tanısı ( yazıyla ) "] || ''}">${p["Sevk tanısı ( yazıyla ) "] || '-'}</td>
+                    <td>${getSelectText('f10', p["Gönderen Birim"])}</td>
+                    <td>${getSelectText('f16', p["Alan birim"])}</td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem; display:inline-block; margin-right:0.5rem" onclick="loadRecord(${p["TC Kimlik No"]})">Düzenle</button>
+                        <button class="btn btn-warning" style="padding:0.2rem 0.5rem; font-size:0.75rem; display:inline-block" onclick="deleteRecord(${p["TC Kimlik No"]})">Sil</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getSelectText(fieldId, value) {
+            if(value === undefined || value === '') return '-';
+            const field = FIELDS.find(f => f.id === fieldId);
+            if(field && field.opts) {
+                const opt = field.opts.find(o => o.v === value);
+                if(opt) return opt.t;
+            }
+            return value;
+        }
+
+        // Export
+        function exportToExcel() {
+            if(patients.length === 0) {
+                showToast('Dışa aktarılacak kayıt yok.', 'warning');
+                return;
+            }
+
+            // Enforce Exact Column Order
+            const exactHeaders = [
+                "TC Kimlik No", "Yaş", "Cinsiyet", "Sevk Tarihi", "Sevk Saati", "Kabul Saati", "Sevk Gün Tipi", 
+                "Mesai Durumu", "Gönderen kurum basamağı", "Gönderen Birim", "Gönderen kurumda ybu var mı?", 
+                "Gönderen kurumda BT Var mı?", "Gönderen kurumda mrg var mı?", "Gönderen kurumda anjiyo ünitesi var mı?", 
+                "Alan kurumun basamağı", "Alan birim", "Kabul eden birim", "Sevk tanısı ( yazıyla ) ", 
+                "Sevk tanısı ( ICD10 kodu )", "Gönderen birimin sevk endikasyonu", "Sevk nedeni ( yazıyla )", 
+                "Sevk için hedeflenen branş", "Sevk eden hekim branşı", "Sevk kararı hekimin branşı", "BT yapıldı mı ?", 
+                "USG yapıldı mı ?", "Röntgen yapıldı mı ?", "Lab tetkiki yapıldı mı  ?", "Patolojik bulgu var mı ?", 
+                "Sevk öncesi uygun konsültasyon yapıldı mı ?", "Sistem sonuç paylaşımı var mı ? ", 
+                "Alıcı merkeze bilgi verildi mi ?", "Hasta bir birim tarafından kabul edildi mi ?", "Yatak teyidi yapıldı mı ? ", 
+                "Sistolik kan basıncı / sevk öncesi ", "Diyastolik kan basıncı / sevk öncesi", "Ortalama arteriyel basınç / sevk öncesi", 
+                "SpO2 / sevk öncesi", "Kalp hızı / sevk öncesi", "Solunum sayısı / sevk öncesi", "Vücut ısısı / sevk öncesi", 
+                "Bilinç durumu ( AVPU ) / sevk öncesi", "Glasgow Koma Skoru / sevk öncesi ", 
+                "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / sevk öncesi", "Hemoglobin / sevk öncesi", 
+                "Kan gazı pH / sevk öncesi", "Vazopressör desteği / sevk öncesi", "Uygun intravenöz tedavi verilmiş mi? ( analjezi/antibiyotik/sıvı )", 
+                "Transfer aracı ", "Transfer yolu", "Ambulans ekibi", "Transfer süresi / dakika", "Transfer mesafesi / kilometre", 
+                "Transfer sırasında kötüleşme var mı ?", "Transfer sırasında CPR gerekti mi ? ", 
+                "Transfer sırasında entübasyon gerekti mi ?", "Transfer sırasında vazopressör ihtiyacı gelişti mi?", 
+                "Sistolik kan basıncı / hedef hastane kabul sırasında", "Diyastolik kan basıncı / hedef hastane kabul sırasında", 
+                "Ortalama arteriyel basınç / hedef hastane kabul sırasında", "SpO2 / hedef hastane kabul sırasında", 
+                "Kalp hızı / hedef hastane kabul sırasında", "Solunum sayısı / hedef hastane kabul sırasında", 
+                "Vücut ısısı / hedef hastane kabul sırasında", "Bilinç durumu ( AVPU ) / hedef hastane kabul sırasında", 
+                "Glasgow koma skoru / hedef hastane kabul sırasında", 
+                "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / hedef hastane kabul sırasında", 
+                "Hemoglobin / hedef hastane kabul sırasında", "Kan gazı pH / hedef hastane kabul sırasında", 
+                "Laktat / hedef hastane kabul sırasında", "Entübasyon / teslimden sonra ilk 6 saat", 
+                " Acil girişim / teslimden sonra ilk 6 saat", "Mortalite / teslimden sonra ilk 6 saat", "Mortalite / 24 saat", 
+                "Acil servis sonlanımı", "Yoğun bakım yatış", "Geri Sevk / 24 saat", "Son tanı / kabul birimi ( yazıyla )", 
+                "ICD10 tanı kodu / kabul birimi", "ilk ve son tanı uyumu ", "Dökümantasyon Tam mı?", "Önlenebilirlik", 
+                "Uzman Değerlendirme ", "Değerlendiren Hekim ", "qSOFA", "VACA", "RSTP", "MEWS"
+            ];
+
+            const exportData = patients.map(p => {
+                const row = {};
+                exactHeaders.forEach(header => {
+                    row[header] = p[header] !== undefined ? p[header] : '';
+                });
+                return row;
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData, { header: exactHeaders });
+            XLSX.utils.book_append_sheet(wb, ws, "Ham Veri Formu");
+            
+            XLSX.writeFile(wb, "Sevk_Verileri_" + new Date().toISOString().slice(0,10) + ".xlsx");
+            showToast('Excel dosyası indirildi.');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', initForm);
+    </script>
+</body>
+</html>
