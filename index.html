@@ -947,9 +947,95 @@
                 padding: 0.6rem;
             }
         }
+
+        /* ===== Giriş / Şifre Ekranı ===== */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #login-overlay.hidden { display: none; }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .login-card h2 {
+            margin: 0 0 0.5rem;
+            color: #1e3a5f;
+            font-size: 1.4rem;
+        }
+        .login-card p {
+            margin: 0 0 1.5rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .login-lock {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .login-card input:focus {
+            outline: none;
+            border-color: #2c5282;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 0.85rem;
+            background: #2c5282;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-card button:hover { background: #1e3a5f; }
+        .login-error {
+            color: #e53e3e;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            min-height: 1.2rem;
+            display: none;
+        }
+        .login-error.show { display: block; }
     </style>
 </head>
 <body>
+
+    <!-- ===== Giriş / Şifre Ekranı ===== -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <div class="login-lock">🔒</div>
+            <h2>Sevk Verisi Giriş İstasyonu</h2>
+            <p>Devam etmek için giriş yapın</p>
+            <form id="login-form" onsubmit="return checkLogin(event)" autocomplete="off">
+                <input type="text" id="login-user" placeholder="Kullanıcı Adı" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <input type="password" id="login-pass" placeholder="Şifre" autocomplete="new-password">
+                <div class="login-error" id="login-error">Kullanıcı adı veya şifre hatalı!</div>
+                <button type="submit">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
 
     <header>
         <div class="header-title">
@@ -2885,8 +2971,45 @@ Bir değer görselde yoksa o anahtarı null yap. Sayısal değerleri yalnızca s
             }
         }
 
+        // ===== Giriş / Şifre Koruması =====
+        const LOGIN_USER = 'NECO';
+        const LOGIN_PASS = '5487569.Mc';
+
+        function checkLogin(e) {
+            if (e) e.preventDefault();
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const errBox = document.getElementById('login-error');
+            // Büyük/küçük harf duyarlı karşılaştırma
+            if (u === LOGIN_USER && p === LOGIN_PASS) {
+                sessionStorage.setItem('sevk_auth', '1');
+                document.getElementById('login-overlay').classList.add('hidden');
+                errBox.classList.remove('show');
+            } else {
+                errBox.classList.add('show');
+                document.getElementById('login-pass').value = '';
+                document.getElementById('login-pass').focus();
+            }
+            return false;
+        }
+
+        function initAuth() {
+            const overlay = document.getElementById('login-overlay');
+            // Oturum boyunca giriş yapılmışsa tekrar sorma (sekme kapanınca sıfırlanır)
+            if (sessionStorage.getItem('sevk_auth') === '1') {
+                overlay.classList.add('hidden');
+            } else {
+                overlay.classList.remove('hidden');
+                const userInput = document.getElementById('login-user');
+                if (userInput) userInput.focus();
+            }
+        }
+
         // Init
-        document.addEventListener('DOMContentLoaded', initForm);
+        document.addEventListener('DOMContentLoaded', function() {
+            initAuth();
+            initForm();
+        });
     </script>
 </body>
 </html>
