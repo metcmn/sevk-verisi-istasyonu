@@ -963,6 +963,11 @@
                     <div class="progress-bar-fill" id="progress-bar"></div>
                 </div>
             </div>
+            <input type="file" id="master-excel-input" accept=".xlsx" style="display:none" onchange="loadMasterExcel(this.files[0])">
+            <button class="btn btn-secondary" onclick="document.getElementById('master-excel-input').click()" title="Ana Excel dosyanızı yükleyin; yeni kayıtlar bu dosyanın üstüne eklenir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span id="master-excel-label">Ana Excel'i Yükle</span>
+            </button>
             <button class="btn btn-secondary" onclick="exportToExcel()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span>Dışa Aktar (Ctrl+E)</span>
@@ -1030,7 +1035,7 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.1.200/pdf.worker.min.mjs';
         window.pdfjsLib = pdfjsLib;
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
     <script>
         'use strict';
@@ -1792,59 +1797,292 @@
         }
 
         // Export
-        function exportToExcel() {
-            if(patients.length === 0) {
+        // Tam kolon sırası (ana dosya yüklenmediğinde temel dışa aktarım için)
+        const EXACT_HEADERS = [
+            "TC Kimlik No", "Yaş", "Cinsiyet", "Sevk Tarihi", "Sevk Saati", "Kabul Saati", "Sevk Gün Tipi", 
+            "Mesai Durumu", "Gönderen kurum basamağı", "Gönderen Birim", "Gönderen kurumda ybu var mı?", 
+            "Gönderen kurumda BT Var mı?", "Gönderen kurumda mrg var mı?", "Gönderen kurumda anjiyo ünitesi var mı?", 
+            "Alan kurumun basamağı", "Alan birim", "Kabul eden birim", "Sevk tanısı ( yazıyla ) ", 
+            "Sevk tanısı ( ICD10 kodu )", "Gönderen birimin sevk endikasyonu", "Sevk nedeni ( yazıyla )", 
+            "Sevk için hedeflenen branş", "Sevk eden hekim branşı", "Sevk kararı hekimin branşı", "BT yapıldı mı ?", 
+            "USG yapıldı mı ?", "Röntgen yapıldı mı ?", "Lab tetkiki yapıldı mı  ?", "Patolojik bulgu var mı ?", 
+            "Sevk öncesi uygun konsültasyon yapıldı mı ?", "Sistem sonuç paylaşımı var mı ? ", 
+            "Alıcı merkeze bilgi verildi mi ?", "Hasta bir birim tarafından kabul edildi mi ?", "Yatak teyidi yapıldı mı ? ", 
+            "Sistolik kan basıncı / sevk öncesi ", "Diyastolik kan basıncı / sevk öncesi", "Ortalama arteriyel basınç / sevk öncesi", 
+            "SpO2 / sevk öncesi", "Kalp hızı / sevk öncesi", "Solunum sayısı / sevk öncesi", "Vücut ısısı / sevk öncesi", 
+            "Bilinç durumu ( AVPU ) / sevk öncesi", "Glasgow Koma Skoru / sevk öncesi ", 
+            "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / sevk öncesi", "Hemoglobin / sevk öncesi", 
+            "Kan gazı pH / sevk öncesi", "Vazopressör desteği / sevk öncesi", "Uygun intravenöz tedavi verilmiş mi? ( analjezi/antibiyotik/sıvı )", 
+            "Transfer aracı ", "Transfer yolu", "Ambulans ekibi", "Transfer süresi / dakika", "Transfer mesafesi / kilometre", 
+            "Transfer sırasında kötüleşme var mı ?", "Transfer sırasında CPR gerekti mi ? ", 
+            "Transfer sırasında entübasyon gerekti mi ?", "Transfer sırasında vazopressör ihtiyacı gelişti mi?", 
+            "Sistolik kan basıncı / hedef hastane kabul sırasında", "Diyastolik kan basıncı / hedef hastane kabul sırasında", 
+            "Ortalama arteriyel basınç / hedef hastane kabul sırasında", "SpO2 / hedef hastane kabul sırasında", 
+            "Kalp hızı / hedef hastane kabul sırasında", "Solunum sayısı / hedef hastane kabul sırasında", 
+            "Vücut ısısı / hedef hastane kabul sırasında", "Bilinç durumu ( AVPU ) / hedef hastane kabul sırasında", 
+            "Glasgow koma skoru / hedef hastane kabul sırasında", 
+            "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / hedef hastane kabul sırasında", 
+            "Hemoglobin / hedef hastane kabul sırasında", "Kan gazı pH / hedef hastane kabul sırasında", 
+            "Laktat / hedef hastane kabul sırasında", "Entübasyon / teslimden sonra ilk 6 saat", 
+            " Acil girişim / teslimden sonra ilk 6 saat", "Mortalite / teslimden sonra ilk 6 saat", "Mortalite / 24 saat", 
+            "Acil servis sonlanımı", "Yoğun bakım yatış", "Geri Sevk / 24 saat", "Son tanı / kabul birimi ( yazıyla )", 
+            "ICD10 tanı kodu / kabul birimi", "ilk ve son tanı uyumu ", "Dökümantasyon Tam mı?", "Önlenebilirlik", 
+            "Uzman Değerlendirme ", "Değerlendiren Hekim ", "qSOFA", "VACA", "RSTP", "MEWS"
+        ];
+
+        // ============================================================
+        // ===== Ana Excel (master) birleştirme sistemi (ExcelJS) =====
+        // ============================================================
+        // Yüklenen ana dosya bellekte tutulur; dışa aktarımda bu dosyanın
+        // ÜSTÜNE yeni kayıtlar eklenir. Renkler, "Veri Sözlüğü" sayfası,
+        // formüller ve tüm biçimlendirme olduğu gibi korunur.
+        let masterExcelBuffer = null;   // yüklenen ana dosyanın ArrayBuffer'ı
+        let masterFileName = '';        // indirirken aynı isimle indirmek için
+
+        const DATE_HEADERS = new Set(['Sevk Tarihi']);
+        const TIME_HEADERS = new Set(['Sevk Saati', 'Kabul Saati']);
+
+        // Başlık/anahtar normalleştirme (baştaki/sondaki ve tekrarlı boşlukları eşitler)
+        function normKey(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+
+        // gg.aa.yyyy -> JS Date (öğlen UTC; gün kaymasını önler)
+        function displayToJsDate(val) {
+            const m = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/.exec(String(val).trim());
+            if (!m) return null;
+            return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], 12, 0, 0));
+        }
+        // "HH:MM" -> gün kesri (Excel saat formatı için)
+        function timeStrToFraction(val) {
+            const m = /^(\d{1,2}):(\d{2})/.exec(String(val).trim());
+            if (!m) return null;
+            return (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) / 1440;
+        }
+        // ExcelJS hücresinden okunan tarihi gg.aa.yyyy'ye çevir
+        function excelCellToDisplayDate(v) {
+            if (v instanceof Date) {
+                const d = String(v.getUTCDate()).padStart(2, '0');
+                const mo = String(v.getUTCMonth() + 1).padStart(2, '0');
+                return `${d}.${mo}.${v.getUTCFullYear()}`;
+            }
+            return String(v);
+        }
+        // ExcelJS hücresinden okunan saati HH:MM'e çevir
+        function excelCellToTimeStr(v) {
+            if (v instanceof Date) {
+                const h = String(v.getUTCHours()).padStart(2, '0');
+                const mi = String(v.getUTCMinutes()).padStart(2, '0');
+                return `${h}:${mi}`;
+            }
+            if (typeof v === 'number') {
+                const mins = Math.round(v * 1440) % 1440;
+                const h = String(Math.floor(mins / 60)).padStart(2, '0');
+                const mi = String(mins % 60).padStart(2, '0');
+                return `${h}:${mi}`;
+            }
+            return String(v);
+        }
+        // ExcelJS hücre değerini düz değere indirger (formül/richtext nesneleri)
+        function unwrapCellValue(v) {
+            if (v == null) return v;
+            if (v instanceof Date) return v;
+            if (typeof v === 'object') {
+                if (v.result !== undefined) return v.result;
+                if (v.text !== undefined) return v.text;
+                if (Array.isArray(v.richText)) return v.richText.map(t => t.text).join('');
+                if (v.hyperlink !== undefined) return v.text || v.hyperlink;
+            }
+            return v;
+        }
+        function tcToNumber(v) {
+            const n = Number(String(v == null ? '' : v).replace(/\D/g, ''));
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+        }
+
+        // Ana Excel dosyasını yükle: bellekte tut + mevcut hastaları tabloya getir
+        async function loadMasterExcel(file) {
+            if (!file) return;
+            if (typeof ExcelJS === 'undefined') {
+                showToast('Excel kütüphanesi henüz yüklenmedi, birkaç saniye sonra tekrar deneyin.', 'warning');
+                return;
+            }
+            try {
+                masterExcelBuffer = await file.arrayBuffer();
+                masterFileName = file.name;
+
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(masterExcelBuffer);
+                const ws = wb.getWorksheet('Ham Veri Formu') || wb.worksheets[0];
+                if (!ws) throw new Error('"Ham Veri Formu" sayfası bulunamadı');
+
+                // Başlıkları HAM haliyle oku (form/tablo anahtarlarıyla birebir eşleşsin)
+                const headers = [];
+                const headerRow = ws.getRow(1);
+                headerRow.eachCell({ includeEmpty: true }, (cell, col) => {
+                    headers[col] = (cell.value == null ? '' : String(cell.value));
+                });
+
+                const loaded = [];
+                for (let r = 2; r <= ws.rowCount; r++) {
+                    const row = ws.getRow(r);
+                    const tcRaw = unwrapCellValue(row.getCell(1).value);
+                    if (tcRaw == null || String(tcRaw).trim() === '') continue;
+                    const obj = {};
+                    for (let c = 1; c < headers.length; c++) {
+                        const h = headers[c];
+                        if (!h || !normKey(h)) continue;
+                        let v = unwrapCellValue(row.getCell(c).value);
+                        if (v == null || v === '') continue;
+                        const nk = normKey(h);
+                        if (DATE_HEADERS.has(nk)) v = excelCellToDisplayDate(v);
+                        else if (TIME_HEADERS.has(nk)) v = excelCellToTimeStr(v);
+                        obj[h] = v;
+                    }
+                    const tcNum = tcToNumber(obj['TC Kimlik No']);
+                    if (tcNum !== null) obj['TC Kimlik No'] = tcNum;
+                    loaded.push(obj);
+                }
+
+                // Ana dosya kaynak kabul edilir; site oturumundaki farklı TC'ler korunur
+                const loadedTC = new Set(loaded.map(l => l['TC Kimlik No']));
+                const sessionOnly = patients.filter(p => !loadedTC.has(tcToNumber(p['TC Kimlik No'])));
+                patients = loaded.concat(sessionOnly);
+                localStorage.setItem('sevk_patients', JSON.stringify(patients));
+                renderTable();
+
+                const lbl = document.getElementById('master-excel-label');
+                if (lbl) lbl.textContent = 'Ana Excel yüklendi ✓';
+                showToast(loaded.length + ' kayıt ana dosyadan yüklendi. Yeni girdikleriniz "Dışa Aktar" ile bu dosyanın üstüne eklenecek.', 'success');
+            } catch (err) {
+                console.error('Ana Excel yükleme hatası:', err);
+                masterExcelBuffer = null;
+                masterFileName = '';
+                showToast('Ana Excel okunamadı: ' + (err.message || 'bilinmeyen hata'), 'error');
+            } finally {
+                const inp = document.getElementById('master-excel-input');
+                if (inp) inp.value = '';
+            }
+        }
+
+        // Dışa aktar: ana dosya varsa üstüne ekle; yoksa basit dosya oluştur
+        async function exportToExcel() {
+            if (patients.length === 0) {
                 showToast('Dışa aktarılacak kayıt yok.', 'warning');
                 return;
             }
+            if (!masterExcelBuffer) {
+                const ok = confirm(
+                    'Ana Excel dosyanızı yüklemediniz.\n\n' +
+                    'Devam ederseniz renkler, "Veri Sözlüğü" sayfası ve formüller OLMADAN yeni bir dosya oluşturulur.\n\n' +
+                    'Mevcut dosyanızın üstüne (biçimlendirmeyi koruyarak) eklemek için önce "Ana Excel\'i Yükle" ile dosyanızı seçin.\n\n' +
+                    'Yine de basit dosya oluşturulsun mu?'
+                );
+                if (!ok) return;
+                return exportFreshExcel();
+            }
+            try {
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(masterExcelBuffer);
+                const ws = wb.getWorksheet('Ham Veri Formu') || wb.worksheets[0];
+                if (!ws) throw new Error('"Ham Veri Formu" sayfası bulunamadı');
 
-            // Enforce Exact Column Order
-            const exactHeaders = [
-                "TC Kimlik No", "Yaş", "Cinsiyet", "Sevk Tarihi", "Sevk Saati", "Kabul Saati", "Sevk Gün Tipi", 
-                "Mesai Durumu", "Gönderen kurum basamağı", "Gönderen Birim", "Gönderen kurumda ybu var mı?", 
-                "Gönderen kurumda BT Var mı?", "Gönderen kurumda mrg var mı?", "Gönderen kurumda anjiyo ünitesi var mı?", 
-                "Alan kurumun basamağı", "Alan birim", "Kabul eden birim", "Sevk tanısı ( yazıyla ) ", 
-                "Sevk tanısı ( ICD10 kodu )", "Gönderen birimin sevk endikasyonu", "Sevk nedeni ( yazıyla )", 
-                "Sevk için hedeflenen branş", "Sevk eden hekim branşı", "Sevk kararı hekimin branşı", "BT yapıldı mı ?", 
-                "USG yapıldı mı ?", "Röntgen yapıldı mı ?", "Lab tetkiki yapıldı mı  ?", "Patolojik bulgu var mı ?", 
-                "Sevk öncesi uygun konsültasyon yapıldı mı ?", "Sistem sonuç paylaşımı var mı ? ", 
-                "Alıcı merkeze bilgi verildi mi ?", "Hasta bir birim tarafından kabul edildi mi ?", "Yatak teyidi yapıldı mı ? ", 
-                "Sistolik kan basıncı / sevk öncesi ", "Diyastolik kan basıncı / sevk öncesi", "Ortalama arteriyel basınç / sevk öncesi", 
-                "SpO2 / sevk öncesi", "Kalp hızı / sevk öncesi", "Solunum sayısı / sevk öncesi", "Vücut ısısı / sevk öncesi", 
-                "Bilinç durumu ( AVPU ) / sevk öncesi", "Glasgow Koma Skoru / sevk öncesi ", 
-                "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / sevk öncesi", "Hemoglobin / sevk öncesi", 
-                "Kan gazı pH / sevk öncesi", "Vazopressör desteği / sevk öncesi", "Uygun intravenöz tedavi verilmiş mi? ( analjezi/antibiyotik/sıvı )", 
-                "Transfer aracı ", "Transfer yolu", "Ambulans ekibi", "Transfer süresi / dakika", "Transfer mesafesi / kilometre", 
-                "Transfer sırasında kötüleşme var mı ?", "Transfer sırasında CPR gerekti mi ? ", 
-                "Transfer sırasında entübasyon gerekti mi ?", "Transfer sırasında vazopressör ihtiyacı gelişti mi?", 
-                "Sistolik kan basıncı / hedef hastane kabul sırasında", "Diyastolik kan basıncı / hedef hastane kabul sırasında", 
-                "Ortalama arteriyel basınç / hedef hastane kabul sırasında", "SpO2 / hedef hastane kabul sırasında", 
-                "Kalp hızı / hedef hastane kabul sırasında", "Solunum sayısı / hedef hastane kabul sırasında", 
-                "Vücut ısısı / hedef hastane kabul sırasında", "Bilinç durumu ( AVPU ) / hedef hastane kabul sırasında", 
-                "Glasgow koma skoru / hedef hastane kabul sırasında", 
-                "Ventilasyon ( spontan / nazal kanül-maske / NIMV / Mekanik ventilatör ) / hedef hastane kabul sırasında", 
-                "Hemoglobin / hedef hastane kabul sırasında", "Kan gazı pH / hedef hastane kabul sırasında", 
-                "Laktat / hedef hastane kabul sırasında", "Entübasyon / teslimden sonra ilk 6 saat", 
-                " Acil girişim / teslimden sonra ilk 6 saat", "Mortalite / teslimden sonra ilk 6 saat", "Mortalite / 24 saat", 
-                "Acil servis sonlanımı", "Yoğun bakım yatış", "Geri Sevk / 24 saat", "Son tanı / kabul birimi ( yazıyla )", 
-                "ICD10 tanı kodu / kabul birimi", "ilk ve son tanı uyumu ", "Dökümantasyon Tam mı?", "Önlenebilirlik", 
-                "Uzman Değerlendirme ", "Değerlendiren Hekim ", "qSOFA", "VACA", "RSTP", "MEWS"
-            ];
-
-            const exportData = patients.map(p => {
-                const row = {};
-                exactHeaders.forEach(header => {
-                    row[header] = p[header] !== undefined ? p[header] : '';
+                // Başlıklar (HAM) + son kolon
+                const headers = [];
+                let maxCol = 0;
+                ws.getRow(1).eachCell({ includeEmpty: true }, (cell, col) => {
+                    headers[col] = (cell.value == null ? '' : String(cell.value));
+                    if (col > maxCol) maxCol = col;
                 });
-                return row;
-            });
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData, { header: exactHeaders });
-            XLSX.utils.book_append_sheet(wb, ws, "Ham Veri Formu");
-            
-            XLSX.writeFile(wb, "Sevk_Verileri_" + new Date().toISOString().slice(0,10) + ".xlsx");
-            showToast('Excel dosyası indirildi.');
+                // Mevcut TC'ler + son dolu veri satırı
+                const existingTC = new Set();
+                let lastDataRow = 1;
+                for (let r = 2; r <= ws.rowCount; r++) {
+                    const v = unwrapCellValue(ws.getRow(r).getCell(1).value);
+                    if (v != null && String(v).trim() !== '') {
+                        existingTC.add(tcToNumber(v));
+                        lastDataRow = r;
+                    }
+                }
+                const templateRow = ws.getRow(lastDataRow); // stil şablonu (son dolu satır)
+
+                let appended = 0;
+                patients.forEach(p => {
+                    const tc = tcToNumber(p['TC Kimlik No']);
+                    if (tc === null || existingTC.has(tc)) return; // zaten var → ASLA dokunma
+                    // Hasta anahtarlarını normalize edilmiş haritaya koy (boşluk farklarını tolere et)
+                    const pNorm = {};
+                    Object.keys(p).forEach(k => { pNorm[normKey(k)] = p[k]; });
+
+                    const newRow = ws.getRow(lastDataRow + 1 + appended);
+                    for (let c = 1; c <= maxCol; c++) {
+                        const cell = newRow.getCell(c);
+                        // Stili son dolu satırdan kopyala (renk/format korunur)
+                        if (lastDataRow >= 2) {
+                            try { cell.style = JSON.parse(JSON.stringify(templateRow.getCell(c).style || {})); } catch (e) {}
+                        }
+                        const h = headers[c];
+                        const nk = normKey(h);
+                        if (!nk) continue;
+                        let val = (p[h] !== undefined) ? p[h] : pNorm[nk];
+                        if (val === undefined || val === null || val === '') continue;
+                        if (DATE_HEADERS.has(nk)) {
+                            const d = displayToJsDate(val);
+                            cell.value = d || val;
+                        } else if (TIME_HEADERS.has(nk)) {
+                            const fr = timeStrToFraction(val);
+                            cell.value = (fr != null) ? fr : val;
+                        } else {
+                            cell.value = val;
+                        }
+                    }
+                    if (typeof newRow.commit === 'function') newRow.commit();
+                    appended++;
+                });
+
+                if (appended === 0) {
+                    showToast('Ana dosyada olmayan yeni kayıt bulunamadı. Dosya değiştirilmedi.', 'warning');
+                    return;
+                }
+
+                const buf = await wb.xlsx.writeBuffer();
+                const outName = masterFileName || ('Sevk_Verileri_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+                downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), outName);
+                showToast(appended + ' yeni kayıt ana dosyaya eklendi. Renkler, sayfalar ve formüller korundu.', 'success');
+            } catch (err) {
+                console.error('Dışa aktarma hatası:', err);
+                showToast('Dışa aktarma hatası: ' + (err.message || 'bilinmeyen hata'), 'error');
+            }
+        }
+
+        // Ana dosya yokken temel dışa aktarım (biçimlendirme olmadan)
+        async function exportFreshExcel() {
+            try {
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('Ham Veri Formu');
+                ws.addRow(EXACT_HEADERS);
+                patients.forEach(p => {
+                    ws.addRow(EXACT_HEADERS.map(h => {
+                        const v = p[h];
+                        return (v === undefined || v === null) ? '' : v;
+                    }));
+                });
+                const buf = await wb.xlsx.writeBuffer();
+                downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Sevk_Verileri_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+                showToast('Excel dosyası indirildi (biçimlendirme olmadan).');
+            } catch (err) {
+                console.error('Dışa aktarma hatası:', err);
+                showToast('Dışa aktarma hatası: ' + (err.message || 'bilinmeyen hata'), 'error');
+            }
         }
 
         // ============================================================
