@@ -1800,6 +1800,7 @@
             pre: {
                 tc_kimlik_no:'f1', yas:'f2', cinsiyet:'f3',
                 sevk_tarihi:'f4', sevk_saati:'f5',
+                kabul_eden_birim:'f17',
                 sistolik:'f35', diastolik:'f36', map:'f37', spo2:'f38', nabiz:'f39',
                 solunum:'f40', ates:'f41', avpu:'f42', gks:'f43', ventilasyon:'f44',
                 hemoglobin:'f45', ph:'f46', vazopressor:'f47'
@@ -2029,16 +2030,11 @@
         }
 
         function applyReceiverInstitutionRules(receiverName) {
-            const t = detectInstitutionType(receiverName);
-            if (!t) return 0;
-
+            // Alan kurum her zaman 3. basamak ve alan birim her zaman Acil servis
             let filled = 0;
-            // I: Turgut Özal Tıp Merkezi alıcı kurum: 3. basamak, acilden kabul
-            if (t === 'totm') {
-                filled += setSelectField('f15', 3);
-                filled += setSelectField('f16', 1);
-                filled += setSelectField('f17', 1);
-            }
+            filled += setSelectField('f15', 3);
+            filled += setSelectField('f16', 1);
+            // f17 (Kabul eden birim) sadece OCR'dan gelirse doldurulacak
             return filled;
         }
 
@@ -2156,6 +2152,17 @@
                 if (v !== null) filled += setSelectField(map.vazopressor, v);
             }
 
+            // Kabul eden birim (f17) - sadece sevk öncesi belgede varsa
+            if (map.kabul_eden_birim && data.kabul_eden_birim != null) {
+                const t = String(data.kabul_eden_birim).trim().toLowerCase();
+                let v = null;
+                if (/acil/i.test(t)) v = 1;
+                else if (/yo[ğg]un\s*bak[ıi]m|yb[uü]/i.test(t)) v = 2;
+                else if (/servis/i.test(t)) v = 3;
+                else if (/di[ğg]er/i.test(t)) v = 4;
+                if (v !== null) filled += setSelectField(map.kabul_eden_birim, v);
+            }
+
             // Kurum adı kuralları (gönderen/alıcı)
             const senderName = data.gonderen_kurum || data.gönderen_kurum || data.kurum || '';
             const receiverName = data.alan_kurum || data.alici_kurum || data.alıcı_kurum || data.hedef_kurum || '';
@@ -2198,7 +2205,7 @@
 
                 const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
                 const schemaKeys = phase === 'pre'
-                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_eden_birim, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
                     : 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
 
                 const promptText =
@@ -2211,7 +2218,7 @@ Kurallar:
 - cinsiyet: "Erkek" | "Kadın" | "E" | "K"
 - gonderen_kurum: gönderen kurum adı (ör. "Malatya Eğitim ve Araştırma Hastanesi", "MEAH", "Battalgazi Devlet Hastanesi", "BDH")
 - alan_kurum: alıcı/hedef kurum adı (ör. "Turgut Özal Tıp Merkezi")
-${phase === 'pre' ? '- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
+${phase === 'pre' ? '- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
 - map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
 - spo2: oksijen satürasyonu (yalnızca sayı, % işareti olmadan)
