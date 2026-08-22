@@ -2181,7 +2181,7 @@
         function getApiKey() { 
             const stored = (localStorage.getItem('abacus_api_key') || '').trim();
             // Varsayılan anahtar - kullanıcı kendi anahtarını girebilir
-            const defaultKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODc0MDk3NjYsIm5iZiI6MTc4NzQwOTc2NiwiZXhwIjoxNzg3NDE2OTY2LCJpc3MiOiJodHRwczovL2FiYWN1cy5haS8iLCJ1c2VyIjoiNDliNzYwMTY2Iiwib3JnIjoiMTIxZDc2YTYxOCJ9.jmx1qTP3WiAXf02aiYPWXPfMFHOwYtWqPMReE9AmyNw_ephemeral';
+            const defaultKey = 's2_98d63c43bbd04028865dd1b77b96c880';
             return stored || defaultKey;
         }
         function setApiKey(v) { localStorage.setItem('abacus_api_key', (v || '').trim()); }
