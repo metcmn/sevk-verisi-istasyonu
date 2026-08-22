@@ -1031,6 +1031,7 @@
             <form id="login-form" onsubmit="return checkLogin(event)" autocomplete="off">
                 <input type="text" id="login-user" placeholder="Kullanıcı Adı" autocomplete="off" autocapitalize="off" spellcheck="false">
                 <input type="password" id="login-pass" placeholder="Şifre" autocomplete="new-password">
+                <input type="password" id="login-apikey" placeholder="API Anahtarı (Abacus.AI)" autocomplete="off" autocapitalize="off" spellcheck="false">
                 <div class="login-error" id="login-error">Kullanıcı adı veya şifre hatalı!</div>
                 <button type="submit">Giriş Yap</button>
             </form>
@@ -2265,10 +2266,8 @@
         };
 
         function getApiKey() { 
-            const stored = (localStorage.getItem('abacus_api_key') || '').trim();
-            // Varsayılan anahtar - kullanıcı kendi anahtarını girebilir
-            const defaultKey = 's2_98d63c43bbd04028865dd1b77b96c880';
-            return stored || defaultKey;
+            // API anahtarı KODDA SAKLANMAZ - kullanıcı giriş ekranında girer, localStorage'da tutulur
+            return (localStorage.getItem('abacus_api_key') || '').trim();
         }
         function setApiKey(v) { localStorage.setItem('abacus_api_key', (v || '').trim()); }
 
@@ -2979,13 +2978,25 @@ Bir değer görselde yoksa o anahtarı null yap. Sayısal değerleri yalnızca s
             if (e) e.preventDefault();
             const u = document.getElementById('login-user').value;
             const p = document.getElementById('login-pass').value;
+            const apik = (document.getElementById('login-apikey').value || '').trim();
             const errBox = document.getElementById('login-error');
             // Büyük/küçük harf duyarlı karşılaştırma
             if (u === LOGIN_USER && p === LOGIN_PASS) {
+                if (!apik) {
+                    errBox.textContent = 'Lütfen API anahtarınızı girin!';
+                    errBox.classList.add('show');
+                    document.getElementById('login-apikey').focus();
+                    return false;
+                }
+                // API anahtarını kaydet (localStorage - cihazda kalır, kodda değil)
+                setApiKey(apik);
+                // Vision panellerindeki API alanlarını da güncelle
+                document.querySelectorAll('input[id^="vision-apikey-"]').forEach(inp => inp.value = apik);
                 sessionStorage.setItem('sevk_auth', '1');
                 document.getElementById('login-overlay').classList.add('hidden');
                 errBox.classList.remove('show');
             } else {
+                errBox.textContent = 'Kullanıcı adı veya şifre hatalı!';
                 errBox.classList.add('show');
                 document.getElementById('login-pass').value = '';
                 document.getElementById('login-pass').focus();
@@ -2995,8 +3006,12 @@ Bir değer görselde yoksa o anahtarı null yap. Sayısal değerleri yalnızca s
 
         function initAuth() {
             const overlay = document.getElementById('login-overlay');
+            // Daha önce girilmiş API anahtarını giriş alanına ön-doldur (kolaylık için)
+            const savedKey = (localStorage.getItem('abacus_api_key') || '').trim();
+            const apikInput = document.getElementById('login-apikey');
+            if (apikInput && savedKey) apikInput.value = savedKey;
             // Oturum boyunca giriş yapılmışsa tekrar sorma (sekme kapanınca sıfırlanır)
-            if (sessionStorage.getItem('sevk_auth') === '1') {
+            if (sessionStorage.getItem('sevk_auth') === '1' && savedKey) {
                 overlay.classList.add('hidden');
             } else {
                 overlay.classList.remove('hidden');
