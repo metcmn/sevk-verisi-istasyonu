@@ -2352,6 +2352,45 @@
                 .trim();
         }
 
+        // Transfer mesafe ve süre bilgileri (TÖTM'ye olan mesafeler)
+        const TRANSFER_DISTANCE_DATA = {
+            'battalgazi devlet': { km: 14, dakika: 18 },
+            'bdh': { km: 14, dakika: 18 },
+            'malatya egitim arastirma': { km: 18, dakika: 23 },
+            'meah': { km: 18, dakika: 23 },
+            'yesilyurt hasan calik': { km: 24, dakika: 28 },
+            'battalgazi eski malatya ilce': { km: 20, dakika: 25 },
+            'akkadag': { km: 46, dakika: 48 },
+            'akçadağ': { km: 46, dakika: 48 },
+            'puturge': { km: 62, dakika: 71 },
+            'pütürge': { km: 62, dakika: 71 },
+            'arguvan': { km: 80, dakika: 70 },
+            'doganyol': { km: 92, dakika: 90 },
+            'doğanyol': { km: 92, dakika: 90 },
+            'darende': { km: 125, dakika: 85 },
+            'kale ilce': { km: 28, dakika: 28 },
+            'yazihan': { km: 50, dakika: 48 },
+            'yazıhan': { km: 50, dakika: 48 },
+            'dogansehir': { km: 70, dakika: 61 },
+            'doğanşehir': { km: 70, dakika: 61 },
+            'hekimhan': { km: 85, dakika: 76 },
+            'kuluncak': { km: 115, dakika: 101 },
+            'arapgir': { km: 128, dakika: 95 }
+        };
+
+        function getTransferDistanceData(institutionName) {
+            const n = normalizeInstitutionName(institutionName);
+            if (!n) return null;
+
+            // Tam eşleşme ara
+            for (const [key, value] of Object.entries(TRANSFER_DISTANCE_DATA)) {
+                if (n.includes(key)) {
+                    return value;
+                }
+            }
+            return null;
+        }
+
         function detectInstitutionType(name) {
             const n = normalizeInstitutionName(name);
             if (!n) return null;
@@ -2404,6 +2443,25 @@
 
             // H: YBÜ (MEAH/BDH var, diğerleri yok)
             filled += setSelectField('f11', (t === 'meah' || t === 'bdh') ? 1 : 0);
+
+            // Transfer mesafe ve süre bilgisi (TÖTM'ye olan mesafe)
+            const distData = getTransferDistanceData(senderName);
+            if (distData) {
+                const f52 = document.getElementById('f52');
+                const f53 = document.getElementById('f53');
+                if (f52 && (!f52.value || f52.value.trim() === '')) {
+                    f52.value = String(distData.dakika);
+                    f52.classList.add('auto-filled');
+                    setTimeout(() => f52.classList.remove('auto-filled'), 5000);
+                    filled++;
+                }
+                if (f53 && (!f53.value || f53.value.trim() === '')) {
+                    f53.value = String(distData.km);
+                    f53.classList.add('auto-filled');
+                    setTimeout(() => f53.classList.remove('auto-filled'), 5000);
+                    filled++;
+                }
+            }
 
             return filled;
         }
