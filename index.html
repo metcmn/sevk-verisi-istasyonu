@@ -702,6 +702,38 @@
             }
         }
 
+        /* ===== RESPONSIVE: TOUCH TABLET (Huawei vb.) ===== */
+        @media (max-width: 1280px) and (pointer: coarse) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+                overflow: auto;
+            }
+            .main-content {
+                flex-direction: column;
+                overflow: visible;
+            }
+            .left-panel, .right-panel {
+                min-height: 0;
+            }
+            .left-panel {
+                flex: none;
+                max-height: 48vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            input, select, button {
+                min-height: 44px;
+            }
+            .vision-drop {
+                min-height: 120px;
+            }
+        }
+
         /* ===== RESPONSIVE: MOBILE (≤ 768px) ===== */
         @media (max-width: 768px) {
             /* Yan yana düzen mobilde alt alta olsun */
@@ -1456,6 +1488,20 @@
                 }
             }
 
+            // ASOS alt sayfalarından sevk endikasyonu ve sevk nedeni
+            const sevkEndikasyonMatch = text.match(/(?:Sevk\s*Endikasyonu|Endikasyon)\s*[:\-]?\s*([^\n\r]{3,120})/i);
+            if (sevkEndikasyonMatch) {
+                const eText = sevkEndikasyonMatch[1].trim();
+                const eVal = mapSevkEndikasyonu(eText);
+                if (eVal !== null) setVal('f20', String(eVal));
+            }
+
+            const sevkNedeniMatch = text.match(/(?:Sevk\s*Nedeni|Sevk\s*Gerekçesi|Gerekçe)\s*[:\-]?\s*([^\n\r]{3,180})/i);
+            if (sevkNedeniMatch) {
+                const sText = sevkNedeniMatch[1].trim().split(/(?:Sevk\s*İçin\s*Hedeflenen|Hedef\s*Branş|ICD|Tan[ıi]\s*Kodu)/i)[0].trim();
+                if (sText.length >= 3) setVal('f21', sText);
+            }
+
             // ===== 7. KAN BASINCI (TA - Sistolik / Diyastolik) =====
             const taPatterns = [
                 /(?:TA|Tansiyon|Kan\s*Basıncı|Arter[iy]el)\s*[:\-]?\s*(\d{2,3})\s*[\/\\]\s*(\d{2,3})/i,
@@ -1512,6 +1558,10 @@
             else if (/\b(?:Verbal|Sözel)\b/i.test(text)) setVal('f42', '2');
             else if (/\b(?:Pain|Ağrı)\b/i.test(text)) setVal('f42', '3');
             else if (/\b(?:Unresponsive|Yanıtsız|Bilinçsiz)\b/i.test(text)) setVal('f42', '4');
+            else if (gksMatch) {
+                const avpuFromGks = mapAvpuFromGks(gksMatch[1]);
+                if (avpuFromGks !== null) setVal('f42', String(avpuFromGks));
+            }
 
             // ===== 14. LAB VALUES =====
             const hbMatch = text.match(/(?:Hemoglobin|Hgb|Hb)\s*[:\-]?\s*(\d{1,2}[\.,]\d{1,2})/i);
@@ -1523,11 +1573,20 @@
             const lacMatch = text.match(/(?:Laktat|Lactate)\s*[:\-]?\s*(\d{1,2}[\.,]\d{1,2})/i);
             if (lacMatch) setVal('f70', lacMatch[1].replace(',', '.'));
 
-            // ===== 15. TETKİKLER =====
-            if (/(?:BT\s|Tomografi|bilgisayarlı\s*tomografi)/i.test(text)) setVal('f25', '1');
-            if (/(?:USG|Ultrason|ultrasonografi)/i.test(text)) setVal('f26', '1');
-            if (/(?:Röntgen|Grafi|X[\-\s]?ray|direkt\s*grafi)/i.test(text)) setVal('f27', '1');
-            if (/(?:Laboratuvar|Lab\b|Tetkik|kan\s*tetkik)/i.test(text)) setVal('f28', '1');
+            // ===== 15. TRANSFER / İV VARSAYILANLARI =====
+            // Kullanıcı notu: Uygun IV tedavi her zaman var kabul edilir
+            setVal('f48', '1');
+
+            // Spesifik olarak belgede yazıyorsa transfer alanlarını ona göre doldur
+            if (/(?:\bALS\b|ileri\s*yaşam\s*desteği)/i.test(text)) setVal('f49', '1');
+            else if (/(?:\bBLS\b|temel\s*yaşam\s*desteği)/i.test(text)) setVal('f49', '2');
+
+            if (/(?:hava\s*yolu|helikopter|uçak)/i.test(text)) setVal('f50', '2');
+            else if (/(?:kara\s*yolu|karayolu|ambulans)/i.test(text)) setVal('f50', '1');
+
+            if (/(?:doktorlu\s*ekip|hekimli\s*ekip)/i.test(text)) setVal('f51', '3');
+            else if (/(?:paramedik)/i.test(text)) setVal('f51', '2');
+            else if (/(?:\bATT\b|acil\s*tıp\s*teknisyeni)/i.test(text)) setVal('f51', '1');
 
             // ===== 16. KURUM =====
             // Kurum adından gönderen/alıcı kurum kurallarını otomatik uygula
@@ -1800,6 +1859,7 @@
             pre: {
                 tc_kimlik_no:'f1', yas:'f2', cinsiyet:'f3',
                 sevk_tarihi:'f4', sevk_saati:'f5',
+                sevk_endikasyonu:'f20', sevk_nedeni:'f21',
                 kabul_eden_birim:'f17',
                 sistolik:'f35', diastolik:'f36', map:'f37', spo2:'f38', nabiz:'f39',
                 solunum:'f40', ates:'f41', avpu:'f42', gks:'f43', ventilasyon:'f44',
@@ -1964,6 +2024,45 @@
             return 1;
         }
 
+        function setSelectFieldIfEmpty(fid, value) {
+            const el = document.getElementById(fid);
+            if (!el) return 0;
+            if (el.value && String(el.value).trim() !== '') return 0;
+            return setSelectField(fid, value);
+        }
+
+        function mapAvpuFromGks(gksRaw) {
+            const gks = parseInt(gksRaw, 10);
+            if (!Number.isFinite(gks)) return null;
+            if (gks >= 13 && gks <= 15) return 1;
+            if (gks >= 10 && gks <= 12) return 2;
+            if (gks >= 7 && gks <= 9) return 3;
+            if (gks <= 6) return 4;
+            return null;
+        }
+
+        function mapSevkEndikasyonu(raw) {
+            const t = normalizeInstitutionName(raw);
+            if (!t) return null;
+            if (/yb[uü]|yogun bakim/.test(t)) return 2;
+            if (/cerrahi|ameliyat|op/.test(t)) return 3;
+            if (/brans|uzmanlik|konsultan/.test(t)) return 4;
+            if (/ekipman|cihaz|anjiyo|bt|mr|mrg|goruntuleme/.test(t)) return 5;
+            if (/hasta istegi|istemiyor|talep/.test(t)) return 6;
+            if (/hekim tercihi|doktor tercihi/.test(t)) return 7;
+            if (/ileri tetkik|tetkik/.test(t)) return 1;
+            return 8;
+        }
+
+        function applyGeneralTransferDefaults() {
+            let filled = 0;
+            filled += setSelectFieldIfEmpty('f48', 1); // Uygun IV tedavi: her zaman var
+            filled += setSelectFieldIfEmpty('f49', 2); // Ambulans varsayılanı: BLS
+            filled += setSelectFieldIfEmpty('f50', 1); // Kara yolu
+            filled += setSelectFieldIfEmpty('f51', 1); // ATT
+            return filled;
+        }
+
         function normalizeInstitutionName(name) {
             return String(name || '')
                 .toLowerCase()
@@ -2040,8 +2139,11 @@
 
         function applyInstitutionRules(senderName, receiverName) {
             let filled = 0;
+            // Kullanıcı kararı: Gönderen birim her zaman Acil servis
+            filled += setSelectField('f10', 1);
             filled += applySenderInstitutionRules(senderName);
             filled += applyReceiverInstitutionRules(receiverName);
+            filled += applyGeneralTransferDefaults();
             return filled;
         }
 
@@ -2112,6 +2214,21 @@
                 }
             });
 
+            // Sevk endikasyonu / sevk nedeni (özellikle ASOS alt sayfalarından)
+            if (map.sevk_endikasyonu && data.sevk_endikasyonu != null && String(data.sevk_endikasyonu).trim() !== '') {
+                const v = mapSevkEndikasyonu(data.sevk_endikasyonu);
+                if (v !== null) filled += setSelectField(map.sevk_endikasyonu, v);
+            }
+            if (map.sevk_nedeni && data.sevk_nedeni != null && String(data.sevk_nedeni).trim() !== '') {
+                const el = document.getElementById(map.sevk_nedeni);
+                if (el && (!el.value || el.value.trim() === '')) {
+                    el.value = String(data.sevk_nedeni).trim();
+                    el.classList.add('auto-filled');
+                    setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                    filled++;
+                }
+            }
+
             // Sayısal / metin alanları
             ['sistolik','diastolik','map','spo2','nabiz','solunum','ates','gks','hemoglobin','ph','laktat'].forEach(k => {
                 if (map[k] && data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
@@ -2126,10 +2243,20 @@
             });
 
             // AVPU (bilinç durumu) select eşlemesi
+            let avpuSet = false;
             if (map.avpu && data.avpu != null) {
                 const m = { alert:1, verbal:2, pain:3, unresponsive:4, a:1, v:2, p:3, u:4 };
                 const v = m[String(data.avpu).trim().toLowerCase()];
-                if (v) filled += setSelectField(map.avpu, v);
+                if (v) {
+                    filled += setSelectField(map.avpu, v);
+                    avpuSet = true;
+                }
+            }
+            // AVPU yoksa GKS'den türet
+            if (!avpuSet && map.avpu && map.gks) {
+                const gksEl = document.getElementById(map.gks);
+                const avpuVal = mapAvpuFromGks(gksEl ? gksEl.value : null);
+                if (avpuVal !== null) filled += setSelectField(map.avpu, avpuVal);
             }
 
             // Ventilasyon select eşlemesi
@@ -2205,7 +2332,7 @@
 
                 const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
                 const schemaKeys = phase === 'pre'
-                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_eden_birim, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, sevk_endikasyonu, sevk_nedeni, kabul_eden_birim, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
                     : 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
 
                 const promptText =
@@ -2218,7 +2345,7 @@ Kurallar:
 - cinsiyet: "Erkek" | "Kadın" | "E" | "K"
 - gonderen_kurum: gönderen kurum adı (ör. "Malatya Eğitim ve Araştırma Hastanesi", "MEAH", "Battalgazi Devlet Hastanesi", "BDH")
 - alan_kurum: alıcı/hedef kurum adı (ör. "Turgut Özal Tıp Merkezi")
-${phase === 'pre' ? '- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
+${phase === 'pre' ? '- sevk_endikasyonu: sevk endikasyonu metni (ör. "İleri tetkik", "YBÜ", "Cerrahi", "Branş eksikliği", "Ekipman eksikliği" vb.)\n- sevk_nedeni: sevk nedeni metni (yazıyla)\n- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
 - map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
 - spo2: oksijen satürasyonu (yalnızca sayı, % işareti olmadan)
