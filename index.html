@@ -1529,15 +1529,7 @@
             if (/(?:Röntgen|Grafi|X[\-\s]?ray|direkt\s*grafi)/i.test(text)) setVal('f27', '1');
             if (/(?:Laboratuvar|Lab\b|Tetkik|kan\s*tetkik)/i.test(text)) setVal('f28', '1');
 
-            // ===== 16. BÖLÜM & KURUM =====
-            const bolumMatch = text.match(/(?:Bölüm|Birim|Klinik|Servis)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,30})/i);
-            if (bolumMatch) {
-                const b = bolumMatch[1].toLowerCase();
-                if (/acil/i.test(b)) setVal('f10', '1');
-                else if (/yoğun\s*bakım|ybü|ybu/i.test(b)) setVal('f10', '2');
-                else setVal('f10', '3');
-            }
-
+            // ===== 16. KURUM =====
             // Kurum adından gönderen/alıcı kurum kurallarını otomatik uygula
             let senderName = '';
             const senderPatterns = [
@@ -2008,6 +2000,9 @@
             if (t === 'meah') filled += setSelectField('f9', 3);
             else if (t === 'bdh') filled += setSelectField('f9', 2);
             else filled += setSelectField('f9', 1);
+
+            // Gönderen birim her zaman Acil servis
+            filled += setSelectField('f10', 1);
 
             // D: Sevk eden ve sevk kararı hekim branşı
             if (t === 'meah' || t === 'bdh') {
