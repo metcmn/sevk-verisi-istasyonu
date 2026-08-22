@@ -1538,13 +1538,34 @@
                 else setVal('f10', '3');
             }
 
-            const kurumMatch = text.match(/(?:Kurum|Hastane)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü0-9\s\.\,]{3,50})/i);
-            if (kurumMatch) {
-                const k = kurumMatch[1].toLowerCase();
-                if (/üniversite|eğitim.*araştırma|şehir\s*hastanesi/i.test(k)) setVal('f9', '3');
-                else if (/devlet\s*hastanesi|ilçe/i.test(k)) setVal('f9', '2');
-                else if (/aile|ASM|sağlık\s*ocağı|1\.\s*basamak/i.test(k)) setVal('f9', '1');
+            // Kurum adından gönderen/alıcı kurum kurallarını otomatik uygula
+            let senderName = '';
+            const senderPatterns = [
+                /(?:Gönderen\s*Kurum|Sevk\s*Eden\s*Kurum|Çıkış\s*Kurumu|Kurum|Hastane)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü0-9\s\.\,]{3,80})/i,
+                /(?:MEAH|BDH|Battalgazi\s*Devlet\s*Hastanesi|Malatya\s*Eğitim\s*ve\s*Araştırma\s*Hastanesi|Darende\s*Devlet\s*Hastanesi)/i
+            ];
+            for (const p of senderPatterns) {
+                const m = text.match(p);
+                if (m) {
+                    senderName = (m[1] || m[0] || '').trim();
+                    if (senderName) break;
+                }
             }
+
+            let receiverName = '';
+            const receiverPatterns = [
+                /(?:Alan\s*Kurum|Alıcı\s*Kurum|Hedef\s*Kurum|Kabul\s*Eden\s*Kurum|Sevk\s*Edilen\s*Kurum|Merkez)\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü0-9\s\.\,]{3,80})/i,
+                /(?:Turgut\s*Özal\s*Tıp\s*Merkezi|TOTM)/i
+            ];
+            for (const p of receiverPatterns) {
+                const m = text.match(p);
+                if (m) {
+                    receiverName = (m[1] || m[0] || '').trim();
+                    if (receiverName) break;
+                }
+            }
+
+            applyInstitutionRules(senderName, receiverName);
 
             // ===== FINALIZE =====
             updateProgress();
@@ -1950,6 +1971,89 @@
             return 1;
         }
 
+        function normalizeInstitutionName(name) {
+            return String(name || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function detectInstitutionType(name) {
+            const n = normalizeInstitutionName(name);
+            if (!n) return null;
+
+            if (n.includes('malatya egitim') && n.includes('arastirma')) return 'meah';
+            if (n.includes('meah')) return 'meah';
+
+            if (n.includes('battalgazi') && n.includes('devlet')) return 'bdh';
+            if (/(^|\s)bdh($|\s)/.test(n)) return 'bdh';
+
+            if (n.includes('darende') && n.includes('devlet')) return 'darende';
+
+            if (n.includes('turgut') && n.includes('ozal') && n.includes('tip')) return 'totm';
+            if (n.includes('totm')) return 'totm';
+
+            return 'other';
+        }
+
+        function applySenderInstitutionRules(senderName) {
+            const t = detectInstitutionType(senderName);
+            if (!t) return 0;
+
+            let filled = 0;
+
+            // A/B/C: Gönderen kurum basamağı
+            if (t === 'meah') filled += setSelectField('f9', 3);
+            else if (t === 'bdh') filled += setSelectField('f9', 2);
+            else filled += setSelectField('f9', 1);
+
+            // D: Sevk eden ve sevk kararı hekim branşı
+            if (t === 'meah' || t === 'bdh') {
+                filled += setSelectField('f23', 2); // Acil uzmanı
+                filled += setSelectField('f24', 2); // Acil uzmanı
+            } else {
+                filled += setSelectField('f23', 1); // Pratisyen
+                filled += setSelectField('f24', 1); // Pratisyen
+            }
+
+            // E: Anjiyo ünitesi (MEAH hariç yok)
+            filled += setSelectField('f14', t === 'meah' ? 1 : 0);
+
+            // F+G: BT (MEAH/BDH/Darende var, diğerleri yok)
+            filled += setSelectField('f12', (t === 'meah' || t === 'bdh' || t === 'darende') ? 1 : 0);
+
+            // F: MR (MEAH/BDH var, diğerleri yok)
+            filled += setSelectField('f13', (t === 'meah' || t === 'bdh') ? 1 : 0);
+
+            // H: YBÜ (MEAH/BDH var, diğerleri yok)
+            filled += setSelectField('f11', (t === 'meah' || t === 'bdh') ? 1 : 0);
+
+            return filled;
+        }
+
+        function applyReceiverInstitutionRules(receiverName) {
+            const t = detectInstitutionType(receiverName);
+            if (!t) return 0;
+
+            let filled = 0;
+            // I: Turgut Özal Tıp Merkezi alıcı kurum: 3. basamak, acilden kabul
+            if (t === 'totm') {
+                filled += setSelectField('f15', 3);
+                filled += setSelectField('f16', 1);
+                filled += setSelectField('f17', 1);
+            }
+            return filled;
+        }
+
+        function applyInstitutionRules(senderName, receiverName) {
+            let filled = 0;
+            filled += applySenderInstitutionRules(senderName);
+            filled += applyReceiverInstitutionRules(receiverName);
+            return filled;
+        }
+
         function applyVisionData(phase, data) {
             const map = VISION_FIELD_MAP[phase];
             let filled = 0;
@@ -2057,6 +2161,11 @@
                 if (v !== null) filled += setSelectField(map.vazopressor, v);
             }
 
+            // Kurum adı kuralları (gönderen/alıcı)
+            const senderName = data.gonderen_kurum || data.gönderen_kurum || data.kurum || '';
+            const receiverName = data.alan_kurum || data.alici_kurum || data.alıcı_kurum || data.hedef_kurum || '';
+            filled += applyInstitutionRules(senderName, receiverName);
+
             updateProgress();
             return filled;
         }
@@ -2094,8 +2203,8 @@
 
                 const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
                 const schemaKeys = phase === 'pre'
-                    ? 'tc_kimlik_no, yas, cinsiyet, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
-                    : 'tc_kimlik_no, yas, cinsiyet, kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
+                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    : 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
 
                 const promptText =
 `Sen bir tıbbi veri çıkarma asistanısın. Ekteki görsel(ler) bir hastanın ${phaseLabel} tıbbi belge/monitör/tetkik fotoğraflarıdır.
@@ -2105,6 +2214,8 @@ Kurallar:
 - tc_kimlik_no: 11 haneli TC Kimlik Numarası (yalnızca rakamlar, boşluksuz)
 - yas: hastanın yaşı (yalnızca sayı)
 - cinsiyet: "Erkek" | "Kadın" | "E" | "K"
+- gonderen_kurum: gönderen kurum adı (ör. "Malatya Eğitim ve Araştırma Hastanesi", "MEAH", "Battalgazi Devlet Hastanesi", "BDH")
+- alan_kurum: alıcı/hedef kurum adı (ör. "Turgut Özal Tıp Merkezi")
 ${phase === 'pre' ? '- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
 - map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
