@@ -1261,6 +1261,9 @@
                         let extraHandler = 'updateProgress()';
                         if (field.id === 'f4') extraHandler = 'autoFillGunTipi(this.value); updateProgress()';
                         if (field.id === 'f5') extraHandler = 'autoFillMesai(this.value); updateProgress()';
+                        // Sistolik/Diastolik girilince MAP otomatik hesapla
+                        if (field.id === 'f35' || field.id === 'f36') extraHandler = 'autoCalculateMAP("pre"); updateProgress()';
+                        if (field.id === 'f58' || field.id === 'f59') extraHandler = 'autoCalculateMAP("post"); updateProgress()';
                         inputHtml = `<input type="${field.type}" id="${field.id}" ${stepAttr} oninput="${extraHandler}" onchange="${extraHandler}" autocomplete="off">`;
                     }
 
@@ -1635,6 +1638,40 @@
                 document.querySelectorAll('.accordion-item').forEach(acc => acc.classList.add('active'));
             } else {
                 showToast('Otomatik eşleşme bulunamadı. Metin yapısı tanınmadı.', 'warning');
+            }
+        }
+
+        // ===== MAP (Ortalama Arteriyel Basınç) Hesaplama =====
+        // Formül: (2 × Diastolik + Sistolik) / 3
+        function autoCalculateMAP(phase) {
+            let sistolikId, diastolikId, mapId;
+            if (phase === 'pre') {
+                sistolikId = 'f35';
+                diastolikId = 'f36';
+                mapId = 'f37';
+            } else if (phase === 'post') {
+                sistolikId = 'f58';
+                diastolikId = 'f59';
+                mapId = 'f60';
+            } else {
+                return;
+            }
+
+            const sysEl = document.getElementById(sistolikId);
+            const diaEl = document.getElementById(diastolikId);
+            const mapEl = document.getElementById(mapId);
+
+            if (!sysEl || !diaEl || !mapEl) return;
+
+            const sys = parseFloat(sysEl.value);
+            const dia = parseFloat(diaEl.value);
+
+            if (!isNaN(sys) && !isNaN(dia) && sys > 0 && dia > 0) {
+                const mapValue = Math.round((2 * dia + sys) / 3);
+                mapEl.value = String(mapValue);
+            } else if (mapEl.value && (!sysEl.value || !diaEl.value)) {
+                // Sistolik veya diastolik silinirse MAP'i de temizle
+                mapEl.value = '';
             }
         }
 
@@ -2547,6 +2584,26 @@
                     }
                 }
             });
+
+            // Sistolik ve diastolik varsa MAP otomatik hesapla
+            if (map.sistolik && map.diastolik && map.map) {
+                const sysEl = document.getElementById(map.sistolik);
+                const diaEl = document.getElementById(map.diastolik);
+                if (sysEl && diaEl && sysEl.value && diaEl.value) {
+                    const sys = parseFloat(sysEl.value);
+                    const dia = parseFloat(diaEl.value);
+                    if (!isNaN(sys) && !isNaN(dia)) {
+                        const mapValue = Math.round((2 * dia + sys) / 3);
+                        const mapEl = document.getElementById(map.map);
+                        if (mapEl) {
+                            mapEl.value = String(mapValue);
+                            mapEl.classList.add('auto-filled');
+                            setTimeout(() => mapEl.classList.remove('auto-filled'), 5000);
+                            filled++;
+                        }
+                    }
+                }
+            }
 
             // AVPU (bilinç durumu) select eşlemesi
             let avpuSet = false;
