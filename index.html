@@ -2099,6 +2099,9 @@
                 const outName = masterFileName || ('Sevk_Verileri_' + new Date().toISOString().slice(0, 10) + '.xlsx');
                 downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), outName);
                 showToast(appended + ' yeni kayıt ana dosyaya eklendi. Renkler, sayfalar ve formüller korundu.', 'success');
+                
+                // LocalStorage temizleme önerisi
+                promptClearLocalStorage();
             } catch (err) {
                 console.error('Dışa aktarma hatası:', err);
                 showToast('Dışa aktarma hatası: ' + (err.message || 'bilinmeyen hata'), 'error');
@@ -2120,10 +2123,31 @@
                 const buf = await wb.xlsx.writeBuffer();
                 downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Sevk_Verileri_' + new Date().toISOString().slice(0, 10) + '.xlsx');
                 showToast('Excel dosyası indirildi (biçimlendirme olmadan).');
+                
+                // LocalStorage temizleme önerisi
+                promptClearLocalStorage();
             } catch (err) {
                 console.error('Dışa aktarma hatası:', err);
                 showToast('Dışa aktarma hatası: ' + (err.message || 'bilinmeyen hata'), 'error');
             }
+        }
+
+        // LocalStorage temizleme önerisi
+        function promptClearLocalStorage() {
+            setTimeout(() => {
+                const shouldClear = confirm(
+                    '✅ Excel dosyası indirildi!\n\n' +
+                    'LocalStorage\'ı temizlemek ister misiniz?\n\n' +
+                    'Verileriniz Excel\'de güvende. LocalStorage\'ı temizlemek sayfa yükleme hızını artırır.\n\n' +
+                    'Bir sonraki seferinde "Ana Excel\'i Yükle" ile dosyanızı yeniden yükleyebilirsiniz.\n\n' +
+                    '(Evet = Temizle ve sayfayı yenile | Hayır = Olduğu gibi bırak)'
+                );
+                if (shouldClear) {
+                    localStorage.removeItem('sevk_patients');
+                    showToast('LocalStorage temizlendi. Sayfa yenileniyor...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }, 800); // Toast bitsin diye kısa gecikme
         }
 
         // ============================================================
