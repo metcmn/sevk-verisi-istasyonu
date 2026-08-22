@@ -487,7 +487,16 @@
             flex-wrap: wrap;
             gap: 0.6rem;
             align-items: center;
-            margin-top: 0.85rem;
+        }
+
+        .vision-actions-top {
+            margin-bottom: 0.85rem;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--surface);
+            padding-bottom: 0.25rem;
         }
 
         .btn-vision {
@@ -944,9 +953,6 @@
 
         <div class="right-panel">
             <div class="form-actions">
-                <button class="btn btn-secondary" onclick="autoFillForm()">
-                    ✨ Otomatik Doldur
-                </button>
                 <button class="btn btn-primary" style="margin-left:auto" onclick="saveRecord()">
                     💾 Kaydet (Ctrl+S)
                 </button>
@@ -1817,6 +1823,12 @@
             panel.innerHTML = `
                 <div class="vision-panel-header">📷 ${title}</div>
                 <div class="vision-panel-body">
+                    <div class="vision-actions vision-actions-top">
+                        <button type="button" class="btn btn-vision" id="vision-btn-${phase}" onclick="readVisionData('${phase}')">
+                            🔍 Fotoğraftan Verileri Oku
+                        </button>
+                        <span class="vision-status" id="vision-status-${phase}"></span>
+                    </div>
                     <div class="vision-drop" id="vision-drop-${phase}">
                         <span class="vision-drop-icon">🖼️</span>
                         Fotoğraf / PDF sürükleyin ya da seçmek için tıklayın
@@ -1824,12 +1836,6 @@
                     </div>
                     <input type="file" id="vision-input-${phase}" accept="image/*,.pdf" multiple style="display:none">
                     <div class="vision-thumbs" id="vision-thumbs-${phase}"></div>
-                    <div class="vision-actions">
-                        <button type="button" class="btn btn-vision" id="vision-btn-${phase}" onclick="readVisionData('${phase}')">
-                            🔍 Fotoğraftan Verileri Oku
-                        </button>
-                        <span class="vision-status" id="vision-status-${phase}"></span>
-                    </div>
                 </div>
             `;
 
