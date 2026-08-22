@@ -353,6 +353,24 @@
         }
 
         /* ===== Vision / Belge Yükleme Paneli ===== */
+        
+        /* Yan yana düzen wrapper */
+        .vision-layout-wrapper {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        
+        .vision-panel-column {
+            position: sticky;
+            top: 1rem;
+        }
+        
+        .form-grid-column {
+            min-width: 0; /* grid overflow fix */
+        }
+        
         .vision-panel {
             margin-bottom: 0.75rem;
             border: 1px solid var(--secondary);
@@ -668,6 +686,15 @@
 
         /* ===== RESPONSIVE: MOBILE (≤ 768px) ===== */
         @media (max-width: 768px) {
+            /* Yan yana düzen mobilde alt alta olsun */
+            .vision-layout-wrapper {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .vision-panel-column {
+                position: static;
+            }
+            
             body {
                 overflow: auto;
                 height: auto;
@@ -1167,12 +1194,14 @@
                 const catFields = FIELDS.filter(f => f.cat === cat.id);
                 if(catFields.length === 0) return;
 
-                // Vital bulgular bölümlerinin üstüne belge/fotoğraf yükleme paneli ekle
-                if (cat.id === 7) container.appendChild(buildVisionPanel('pre'));
-                if (cat.id === 9) container.appendChild(buildVisionPanel('post'));
-
                 const accordion = document.createElement('div');
                 accordion.className = 'accordion-item';
+                
+                // Vital bulgular bölümlerinde yan yana düzen (vision panel + form)
+                const needsSideBySide = (cat.id === 7 || cat.id === 9);
+                if (needsSideBySide) {
+                    accordion.classList.add('vision-side-by-side');
+                }
                 if(cat.id === 1) accordion.classList.add('active'); // Open first by default
 
                 accordion.innerHTML = `
@@ -1181,9 +1210,18 @@
                         <div class="accordion-status"><span class="cat-filled">0</span> / ${catFields.length} dolu</div>
                     </div>
                     <div class="accordion-content">
+                        ${needsSideBySide ? '<div class="vision-layout-wrapper"><div class="vision-panel-column"></div><div class="form-grid-column">' : ''}
                         <div class="form-grid"></div>
+                        ${needsSideBySide ? '</div></div>' : ''}
                     </div>
                 `;
+
+                // Vision panelini ekle (yan yana düzende)
+                if (needsSideBySide) {
+                    const phase = cat.id === 7 ? 'pre' : 'post';
+                    const visionColumn = accordion.querySelector('.vision-panel-column');
+                    if (visionColumn) visionColumn.appendChild(buildVisionPanel(phase));
+                }
 
                 const grid = accordion.querySelector('.form-grid');
 
