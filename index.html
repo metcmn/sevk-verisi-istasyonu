@@ -1087,7 +1087,7 @@
             { id: "f2", cat: 1, type: "number", label: "Yaş", excel: "Yaş" },
             { id: "f3", cat: 1, type: "select", label: "Cinsiyet", excel: "Cinsiyet", opts: [{v:1,t:"Erkek"},{v:2,t:"Kadın"}] },
             // Cat 2
-            { id: "f4", cat: 2, type: "text", label: "Sevk Tarihi (gg.aa.yyyy)", excel: "Sevk Tarihi" },
+            { id: "f4", cat: 2, type: "date", label: "Sevk Tarihi", excel: "Sevk Tarihi" },
             { id: "f5", cat: 2, type: "time", label: "Sevk Saati", excel: "Sevk Saati" },
             { id: "f6", cat: 2, type: "time", label: "Kabul Saati", excel: "Kabul Saati" },
             { id: "f7", cat: 2, type: "select", label: "Sevk Gün Tipi", excel: "Sevk Gün Tipi", opts: [{v:1,t:"Hafta içi"},{v:2,t:"Haftasonu"}] },
@@ -1239,7 +1239,11 @@
                         inputHtml = `<select id="${field.id}" onchange="updateProgress()">${optsHtml}</select>`;
                     } else {
                         const stepAttr = field.step ? `step="${field.step}"` : '';
-                        inputHtml = `<input type="${field.type}" id="${field.id}" ${stepAttr} oninput="updateProgress()" autocomplete="off">`;
+                        // Otomatik doldurma: Sevk Tarihi -> Gün Tipi, Sevk Saati -> Mesai Durumu
+                        let extraHandler = 'updateProgress()';
+                        if (field.id === 'f4') extraHandler = 'autoFillGunTipi(this.value); updateProgress()';
+                        if (field.id === 'f5') extraHandler = 'autoFillMesai(this.value); updateProgress()';
+                        inputHtml = `<input type="${field.type}" id="${field.id}" ${stepAttr} oninput="${extraHandler}" onchange="${extraHandler}" autocomplete="off">`;
                     }
 
                     group.innerHTML = `
@@ -1402,10 +1406,16 @@
                 const el = document.getElementById(fieldId);
                 if (!el) return;
                 if (el.value && el.value.trim() !== '') return;
-                el.value = String(value).trim();
+                let v = String(value).trim();
+                // Tarih alanı (date input) için gg.aa.yyyy -> yyyy-mm-dd çevir
+                if (el.type === 'date') v = displayToDate(v);
+                el.value = v;
                 el.classList.add('auto-filled');
                 setTimeout(() => el.classList.remove('auto-filled'), 5000);
                 filledCount++;
+                // Sevk Tarihi/Saati okunduğunda gün tipi ve mesai durumunu otomatik doldur
+                if (fieldId === 'f4') autoFillGunTipi(el.value);
+                if (fieldId === 'f5') autoFillMesai(el.value);
             }
 
             // ===== 1. TC KİMLİK NO =====
@@ -1616,11 +1626,66 @@
             }
         }
 
+        // ===== Otomatik Doldurma: Tarih -> Gün Tipi, Saat -> Mesai Durumu =====
+        // Sevk Tarihi seçilince hafta içi (1) / hafta sonu (2) otomatik dolar
+        function autoFillGunTipi(dateStr) {
+            const f7 = document.getElementById('f7');
+            if (!f7 || !dateStr) return;
+            let d = null;
+            // date input formatı: yyyy-mm-dd
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                d = new Date(dateStr + 'T00:00:00');
+            } else if (/^\d{2}[\.\/-]\d{2}[\.\/-]\d{4}$/.test(dateStr)) {
+                // gg.aa.yyyy formatı
+                const parts = dateStr.split(/[\.\/-]/);
+                d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+            }
+            if (!d || isNaN(d.getTime())) return;
+            const day = d.getDay(); // 0=Pazar, 6=Cumartesi
+            f7.value = (day === 0 || day === 6) ? 2 : 1; // Hafta sonu=2, Hafta içi=1
+        }
+
+        // Sevk Saati girilince 08:00-17:00 arası mesai (1) / dışı (2) otomatik dolar
+        function autoFillMesai(timeStr) {
+            const f8 = document.getElementById('f8');
+            if (!f8 || !timeStr) return;
+            const m = timeStr.match(/^(\d{1,2}):(\d{2})/);
+            if (!m) return;
+            const totalMin = parseInt(m[1]) * 60 + parseInt(m[2]);
+            const start = 8 * 60;   // 08:00
+            const end = 17 * 60;    // 17:00
+            // 08:00-17:00 arası (17:00 dahil değil) = Mesai (1), diğer = Mesai dışı (2)
+            f8.value = (totalMin >= start && totalMin < end) ? 1 : 2;
+        }
+
+        // Tarih format çevirici: yyyy-mm-dd -> gg.aa.yyyy
+        function dateToDisplay(val) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                const p = val.split('-');
+                return `${p[2]}.${p[1]}.${p[0]}`;
+            }
+            return val;
+        }
+        // Tarih format çevirici: gg.aa.yyyy -> yyyy-mm-dd (date input için)
+        function displayToDate(val) {
+            if (/^\d{2}[\.\/-]\d{2}[\.\/-]\d{4}$/.test(val)) {
+                const p = val.split(/[\.\/-]/);
+                return `${p[2]}-${p[1]}-${p[0]}`;
+            }
+            return val;
+        }
+
         // Data Management
         function getFormData() {
             const data = {};
             FIELDS.forEach(f => {
-                const val = document.getElementById(f.id).value;
+                let val = document.getElementById(f.id).value;
+                // Tarih alanını gg.aa.yyyy formatında kaydet
+                if (f.type === 'date' && val) {
+                    val = dateToDisplay(val);
+                    data[f.excel] = val;
+                    return;
+                }
                 // Save numeric value for selects/numbers, otherwise string
                 if(val === '') {
                     data[f.excel] = '';
@@ -1682,9 +1747,15 @@
             if(p) {
                 FIELDS.forEach(f => {
                     if(p[f.excel] !== undefined) {
-                        document.getElementById(f.id).value = p[f.excel];
+                        let v = p[f.excel];
+                        // Tarih alanı için gg.aa.yyyy -> yyyy-mm-dd çevir
+                        if (f.type === 'date' && v) v = displayToDate(String(v));
+                        document.getElementById(f.id).value = v;
                     }
                 });
+                // Yüklenen kayıt için otomatik alanları da tetikle
+                const f4v = document.getElementById('f4'); if (f4v && f4v.value) autoFillGunTipi(f4v.value);
+                const f5v = document.getElementById('f5'); if (f5v && f5v.value) autoFillMesai(f5v.value);
                 updateProgress();
                 showToast('Kayıt forma yüklendi.');
             }
@@ -1788,11 +1859,13 @@
         // Faz bazlı alan eşlemesi (JSON anahtarı -> form alanı id)
         const VISION_FIELD_MAP = {
             pre: {
+                sevk_tarihi:'f4', sevk_saati:'f5',
                 sistolik:'f35', diastolik:'f36', map:'f37', spo2:'f38', nabiz:'f39',
                 solunum:'f40', ates:'f41', avpu:'f42', gks:'f43', ventilasyon:'f44',
                 hemoglobin:'f45', ph:'f46', vazopressor:'f47'
             },
             post: {
+                kabul_saati:'f6',
                 sistolik:'f58', diastolik:'f59', map:'f60', spo2:'f61', nabiz:'f62',
                 solunum:'f63', ates:'f64', avpu:'f65', gks:'f66', ventilasyon:'f67',
                 hemoglobin:'f68', ph:'f69', laktat:'f70'
@@ -1963,6 +2036,35 @@
             const map = VISION_FIELD_MAP[phase];
             let filled = 0;
 
+            // Sevk Tarihi (date alanı) - gg.aa.yyyy -> yyyy-mm-dd
+            if (map.sevk_tarihi && data.sevk_tarihi != null && String(data.sevk_tarihi).trim() !== '') {
+                const el = document.getElementById(map.sevk_tarihi);
+                if (el && (!el.value || el.value.trim() === '')) {
+                    el.value = displayToDate(String(data.sevk_tarihi).trim().replace(/[\/-]/g, '.'));
+                    el.classList.add('auto-filled');
+                    setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                    autoFillGunTipi(el.value);
+                    filled++;
+                }
+            }
+
+            // Sevk Saati / Kabul Saati (time alanları) - hh:mm
+            [['sevk_saati','f5'],['kabul_saati','f6']].forEach(([key]) => {
+                if (map[key] && data[key] != null && String(data[key]).trim() !== '') {
+                    const el = document.getElementById(map[key]);
+                    if (el && (!el.value || el.value.trim() === '')) {
+                        const tm = String(data[key]).trim().replace('.', ':').match(/(\d{1,2}):(\d{2})/);
+                        if (tm) {
+                            el.value = tm[1].padStart(2,'0') + ':' + tm[2];
+                            el.classList.add('auto-filled');
+                            setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                            if (map[key] === 'f5') autoFillMesai(el.value);
+                            filled++;
+                        }
+                    }
+                }
+            });
+
             // Sayısal / metin alanları
             ['sistolik','diastolik','map','spo2','nabiz','solunum','ates','gks','hemoglobin','ph','laktat'].forEach(k => {
                 if (map[k] && data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
@@ -2040,14 +2142,15 @@
 
                 const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
                 const schemaKeys = phase === 'pre'
-                    ? 'sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
-                    : 'sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
+                    ? 'sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    : 'kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
 
                 const promptText =
 `Sen bir tıbbi veri çıkarma asistanısın. Ekteki görsel(ler) bir hastanın ${phaseLabel} tıbbi belge/monitör/tetkik fotoğraflarıdır.
 Görsellerdeki vital bulguları ve laboratuvar değerlerini oku ve SADECE geçerli bir JSON nesnesi döndür (başka hiçbir açıklama yazma).
 JSON anahtarları: ${schemaKeys}
 Kurallar:
+${phase === 'pre' ? '- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
 - map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
 - spo2: oksijen satürasyonu (yalnızca sayı, % işareti olmadan)
