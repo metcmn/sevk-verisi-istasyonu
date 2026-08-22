@@ -352,6 +352,169 @@
             100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
         }
 
+        /* ===== Vision / Belge Yükleme Paneli ===== */
+        .vision-panel {
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--secondary);
+            border-radius: 0.5rem;
+            background: linear-gradient(180deg, rgba(0,212,170,0.06), var(--surface));
+            overflow: hidden;
+        }
+
+        .vision-panel-header {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vision-panel-body {
+            padding: 1rem;
+        }
+
+        .vision-drop {
+            border: 2px dashed var(--border);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .vision-drop:hover, .vision-drop.dragover {
+            border-color: var(--secondary);
+            background: rgba(0,212,170,0.08);
+            color: var(--text-primary);
+        }
+
+        .vision-drop .vision-drop-icon {
+            font-size: 1.75rem;
+            display: block;
+            margin-bottom: 0.4rem;
+        }
+
+        .vision-thumbs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.85rem;
+        }
+
+        .vision-thumb {
+            position: relative;
+            width: 84px;
+            height: 84px;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            background: rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 0.25rem;
+        }
+
+        .vision-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .vision-thumb .pdf-badge {
+            font-size: 1.5rem;
+        }
+
+        .vision-thumb .thumb-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vision-thumb .thumb-remove:hover {
+            background: var(--danger);
+        }
+
+        .vision-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            align-items: center;
+            margin-top: 0.85rem;
+        }
+
+        .btn-vision {
+            background: var(--secondary);
+            color: #06231d;
+            font-weight: 600;
+        }
+
+        .btn-vision:hover { filter: brightness(1.08); }
+
+        .btn-vision:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .vision-status {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .vision-spinner {
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #06231d;
+            border-radius: 50%;
+            animation: vision-spin 0.7s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes vision-spin { to { transform: rotate(360deg); } }
+
+        .vision-apikey-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .vision-apikey-row input {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .vision-hint {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 0.4rem;
+            line-height: 1.4;
+        }
+
+        .vision-hint a { color: var(--secondary); }
+
         /* Bottom Table Panel */
         .bottom-panel {
             height: 250px;
@@ -1004,6 +1167,10 @@
                 const catFields = FIELDS.filter(f => f.cat === cat.id);
                 if(catFields.length === 0) return;
 
+                // Vital bulgular bölümlerinin üstüne belge/fotoğraf yükleme paneli ekle
+                if (cat.id === 7) container.appendChild(buildVisionPanel('pre'));
+                if (cat.id === 9) container.appendChild(buildVisionPanel('post'));
+
                 const accordion = document.createElement('div');
                 accordion.className = 'accordion-item';
                 if(cat.id === 1) accordion.classList.add('active'); // Open first by default
@@ -1571,6 +1738,332 @@
             
             XLSX.writeFile(wb, "Sevk_Verileri_" + new Date().toISOString().slice(0,10) + ".xlsx");
             showToast('Excel dosyası indirildi.');
+        }
+
+        // ============================================================
+        // ===== Belge / Fotoğraf → Vision OCR Modülü =====
+        // ============================================================
+        const VISION_ENDPOINT = 'https://routellm.abacus.ai/v1/chat/completions';
+        const VISION_MODEL = 'gpt-4o';
+        const visionFiles = { pre: [], post: [] };
+
+        // Faz bazlı alan eşlemesi (JSON anahtarı -> form alanı id)
+        const VISION_FIELD_MAP = {
+            pre: {
+                sistolik:'f35', diastolik:'f36', map:'f37', spo2:'f38', nabiz:'f39',
+                solunum:'f40', ates:'f41', avpu:'f42', gks:'f43', ventilasyon:'f44',
+                hemoglobin:'f45', ph:'f46', vazopressor:'f47'
+            },
+            post: {
+                sistolik:'f58', diastolik:'f59', map:'f60', spo2:'f61', nabiz:'f62',
+                solunum:'f63', ates:'f64', avpu:'f65', gks:'f66', ventilasyon:'f67',
+                hemoglobin:'f68', ph:'f69', laktat:'f70'
+            }
+        };
+
+        function getApiKey() { return (localStorage.getItem('abacus_api_key') || '').trim(); }
+        function setApiKey(v) { localStorage.setItem('abacus_api_key', (v || '').trim()); }
+
+        function saveVisionApiKey(v, notify) {
+            setApiKey(v);
+            document.querySelectorAll('input[id^="vision-apikey-"]').forEach(inp => inp.value = getApiKey());
+            if (notify) showToast('API anahtarı kaydedildi.', 'success');
+        }
+
+        // Yükleme panelini oluştur (phase: 'pre' | 'post')
+        function buildVisionPanel(phase) {
+            const title = phase === 'pre'
+                ? 'Sevk Öncesi Belge / Fotoğraf Yükle'
+                : 'Sevk Sonrası Belge / Fotoğraf Yükle';
+
+            const panel = document.createElement('div');
+            panel.className = 'vision-panel';
+            panel.innerHTML = `
+                <div class="vision-panel-header">📷 ${title}</div>
+                <div class="vision-panel-body">
+                    <div class="vision-drop" id="vision-drop-${phase}">
+                        <span class="vision-drop-icon">🖼️</span>
+                        Fotoğraf / PDF sürükleyin ya da seçmek için tıklayın
+                        <div style="font-size:0.72rem;margin-top:0.3rem;">JPG, PNG, PDF • birden fazla dosya seçilebilir</div>
+                    </div>
+                    <input type="file" id="vision-input-${phase}" accept="image/*,.pdf" multiple style="display:none">
+                    <div class="vision-thumbs" id="vision-thumbs-${phase}"></div>
+                    <div class="vision-actions">
+                        <button type="button" class="btn btn-vision" id="vision-btn-${phase}" onclick="readVisionData('${phase}')">
+                            🔍 Fotoğraftan Verileri Oku
+                        </button>
+                        <span class="vision-status" id="vision-status-${phase}"></span>
+                    </div>
+                    <div class="vision-apikey-row">
+                        <input type="password" id="vision-apikey-${phase}" placeholder="Abacus.AI API anahtarı" value="${getApiKey()}"
+                               onchange="saveVisionApiKey(this.value)" autocomplete="off">
+                        <button type="button" class="btn btn-secondary"
+                                onclick="saveVisionApiKey(document.getElementById('vision-apikey-${phase}').value, true)">Kaydet</button>
+                    </div>
+                    <div class="vision-hint">
+                        🔒 API anahtarı yalnızca bu tarayıcıda (localStorage) saklanır, hiçbir sunucuya gönderilmez.
+                        Görseller yalnızca "Verileri Oku" anında analiz için Abacus.AI'a iletilir.
+                    </div>
+                </div>
+            `;
+
+            // Sürükle-bırak ve dosya seçme olaylarını bağla (node'lar panel içinde mevcut)
+            const drop = panel.querySelector('.vision-drop');
+            const input = panel.querySelector('input[type="file"]');
+            drop.addEventListener('click', () => input.click());
+            ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => {
+                e.preventDefault(); drop.classList.add('dragover');
+            }));
+            ['dragleave','dragend'].forEach(ev => drop.addEventListener(ev, e => {
+                e.preventDefault(); drop.classList.remove('dragover');
+            }));
+            drop.addEventListener('drop', e => {
+                e.preventDefault(); drop.classList.remove('dragover');
+                handleVisionFiles(phase, e.dataTransfer.files);
+            });
+            input.addEventListener('change', e => handleVisionFiles(phase, e.target.files));
+
+            return panel;
+        }
+
+        function handleVisionFiles(phase, fileList) {
+            const files = Array.from(fileList || []);
+            files.forEach(f => {
+                const okType = f.type.startsWith('image/') || f.type === 'application/pdf'
+                    || /\.(jpe?g|png|pdf)$/i.test(f.name);
+                if (!okType) {
+                    showToast('"' + f.name + '" desteklenmeyen bir format.', 'warning');
+                    return;
+                }
+                visionFiles[phase].push(f);
+            });
+            renderVisionThumbs(phase);
+            // input'u sıfırla ki aynı dosya tekrar seçilebilsin
+            const input = document.getElementById('vision-input-' + phase);
+            if (input) input.value = '';
+        }
+
+        function renderVisionThumbs(phase) {
+            const wrap = document.getElementById('vision-thumbs-' + phase);
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            visionFiles[phase].forEach((f, idx) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'vision-thumb';
+                if (f.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(f);
+                    thumb.innerHTML = `<img src="${url}" alt=""><button class="thumb-remove" title="Kaldır">×</button>`;
+                } else {
+                    const shortName = f.name.length > 20 ? f.name.slice(0, 18) + '…' : f.name;
+                    thumb.innerHTML = `<div><div class="pdf-badge">📄</div><div style="word-break:break-all;">${shortName}</div></div><button class="thumb-remove" title="Kaldır">×</button>`;
+                }
+                thumb.querySelector('.thumb-remove').addEventListener('click', () => {
+                    visionFiles[phase].splice(idx, 1);
+                    renderVisionThumbs(phase);
+                });
+                wrap.appendChild(thumb);
+            });
+        }
+
+        // Dosyayı görsel data-URL dizisine çevir (resim: 1 adet; PDF: sayfa başına PNG, en fazla 5 sayfa)
+        async function fileToImageDataURLs(file) {
+            if (file.type.startsWith('image/')) {
+                const url = await new Promise((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result);
+                    r.onerror = rej;
+                    r.readAsDataURL(file);
+                });
+                return [url];
+            }
+            // PDF → pdf.js ile sayfaları PNG'ye render et
+            if (window.pdfjsLib) {
+                const buf = await file.arrayBuffer();
+                const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+                const urls = [];
+                const maxPages = Math.min(pdf.numPages, 5);
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 2 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                    urls.push(canvas.toDataURL('image/png'));
+                }
+                return urls;
+            }
+            return [];
+        }
+
+        function parseVisionJson(raw) {
+            if (!raw) return null;
+            let s = String(raw).trim();
+            s = s.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const start = s.indexOf('{');
+            const end = s.lastIndexOf('}');
+            if (start !== -1 && end !== -1) s = s.slice(start, end + 1);
+            try { return JSON.parse(s); } catch (e) { return null; }
+        }
+
+        function setSelectField(fid, value) {
+            const el = document.getElementById(fid);
+            if (!el) return 0;
+            el.value = String(value);
+            if (el.value !== String(value)) return 0; // eşleşen seçenek yok
+            el.classList.add('auto-filled');
+            setTimeout(() => el.classList.remove('auto-filled'), 5000);
+            return 1;
+        }
+
+        function applyVisionData(phase, data) {
+            const map = VISION_FIELD_MAP[phase];
+            let filled = 0;
+
+            // Sayısal / metin alanları
+            ['sistolik','diastolik','map','spo2','nabiz','solunum','ates','gks','hemoglobin','ph','laktat'].forEach(k => {
+                if (map[k] && data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
+                    const el = document.getElementById(map[k]);
+                    if (el) {
+                        el.value = String(data[k]).trim();
+                        el.classList.add('auto-filled');
+                        setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                        filled++;
+                    }
+                }
+            });
+
+            // AVPU (bilinç durumu) select eşlemesi
+            if (map.avpu && data.avpu != null) {
+                const m = { alert:1, verbal:2, pain:3, unresponsive:4, a:1, v:2, p:3, u:4 };
+                const v = m[String(data.avpu).trim().toLowerCase()];
+                if (v) filled += setSelectField(map.avpu, v);
+            }
+
+            // Ventilasyon select eşlemesi
+            if (map.ventilasyon && data.ventilasyon != null) {
+                const t = String(data.ventilasyon).trim().toLowerCase();
+                let v = null;
+                if (t.includes('spontan')) v = 0;
+                else if (t.includes('nimv')) v = 2;
+                else if (t.includes('mekanik') || t.includes('ventilat') || t === 'mv') v = 3;
+                else if (t.includes('o2') || t.includes('nazal') || t.includes('maske') || t.includes('oksijen')) v = 1;
+                if (v !== null) filled += setSelectField(map.ventilasyon, v);
+            }
+
+            // Vazopressör desteği (yalnızca sevk öncesi) select eşlemesi
+            if (map.vazopressor && data.vazopressor != null) {
+                const t = String(data.vazopressor).trim().toLowerCase();
+                let v = null;
+                if (t.includes('var') || t === '1' || t === 'true' || t.includes('evet')) v = 1;
+                else if (t.includes('yok') || t === '0' || t === 'false' || t.includes('hayır')) v = 0;
+                if (v !== null) filled += setSelectField(map.vazopressor, v);
+            }
+
+            updateProgress();
+            return filled;
+        }
+
+        async function readVisionData(phase) {
+            const files = visionFiles[phase];
+            const btn = document.getElementById('vision-btn-' + phase);
+            const status = document.getElementById('vision-status-' + phase);
+
+            if (!files.length) {
+                showToast('Önce en az bir belge/fotoğraf yükleyin.', 'warning');
+                return;
+            }
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Lütfen önce Abacus.AI API anahtarınızı girin.', 'warning');
+                const inp = document.getElementById('vision-apikey-' + phase);
+                if (inp) inp.focus();
+                return;
+            }
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="vision-spinner"></span> Okunuyor...';
+            status.textContent = 'Görseller analiz ediliyor, lütfen bekleyin...';
+
+            try {
+                // Tüm dosyaları görsel data-URL'lerine çevir
+                let images = [];
+                for (const f of files) {
+                    const urls = await fileToImageDataURLs(f);
+                    images = images.concat(urls);
+                }
+                if (!images.length) throw new Error('Görsel hazırlanamadı');
+
+                const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
+                const schemaKeys = phase === 'pre'
+                    ? 'sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    : 'sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
+
+                const promptText =
+`Sen bir tıbbi veri çıkarma asistanısın. Ekteki görsel(ler) bir hastanın ${phaseLabel} tıbbi belge/monitör/tetkik fotoğraflarıdır.
+Görsellerdeki vital bulguları ve laboratuvar değerlerini oku ve SADECE geçerli bir JSON nesnesi döndür (başka hiçbir açıklama yazma).
+JSON anahtarları: ${schemaKeys}
+Kurallar:
+- sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
+- map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
+- spo2: oksijen satürasyonu (yalnızca sayı, % işareti olmadan)
+- nabiz: kalp hızı /dk
+- solunum: solunum sayısı /dk
+- ates: vücut ısısı °C
+- gks: Glasgow koma skoru (3-15)
+- avpu: "Alert" | "Verbal" | "Pain" | "Unresponsive"
+- ventilasyon: "Spontan" | "O2" | "NIMV" | "MV"
+- hemoglobin: g/dL
+- ph: kan gazı pH
+${phase === 'pre' ? '- vazopressor: "Var" | "Yok"' : '- laktat: mmol/L'}
+Bir değer görselde yoksa o anahtarı null yap. Sayısal değerleri yalnızca sayı olarak ver (birim ekleme).`;
+
+                const content = [{ type: 'text', text: promptText }];
+                images.forEach(url => content.push({ type: 'image_url', image_url: { url } }));
+
+                const resp = await fetch(VISION_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + apiKey
+                    },
+                    body: JSON.stringify({
+                        model: VISION_MODEL,
+                        messages: [{ role: 'user', content }],
+                        temperature: 0
+                    })
+                });
+
+                if (!resp.ok) {
+                    if (resp.status === 401 || resp.status === 403) {
+                        throw new Error('API anahtarı geçersiz veya yetkisiz (' + resp.status + ')');
+                    }
+                    throw new Error('API hatası (' + resp.status + ')');
+                }
+
+                const data = await resp.json();
+                const rawContent = data && data.choices && data.choices[0] && data.choices[0].message
+                    ? data.choices[0].message.content : '';
+                const parsed = parseVisionJson(rawContent);
+                if (!parsed) throw new Error('Yanıt çözümlenemedi');
+
+                const filled = applyVisionData(phase, parsed);
+                if (filled > 0) {
+                    showToast(filled + ' alan fotoğraftan otomatik dolduruldu.', 'success');
+                    status.textContent = '✓ ' + filled + ' alan dolduruldu.';
+                } else {
+                    showToast('Görselde okunabilir vital bulgu bulunamadı.', 'warning');
+                    status.textContent = 'Okunabilir veri bulunamadı.';
+                }
+            } catch (err) {
+                console.error('Vision OCR hatası:', err);
+                showToast('Veriler okunamadı, lütfen manuel girin.', 'error');
+                status.textContent = 'Hata: ' + (err.message || 'okunamadı');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
 
         // Init
