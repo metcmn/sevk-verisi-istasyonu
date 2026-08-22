@@ -2138,6 +2138,7 @@
             pre: {
                 tc_kimlik_no:'f1', yas:'f2', cinsiyet:'f3',
                 sevk_tarihi:'f4', sevk_saati:'f5',
+                sevk_tanisi:'f18', icd10:'f19',
                 sevk_endikasyonu:'f20', sevk_nedeni:'f21',
                 kabul_eden_birim:'f17',
                 sistolik:'f35', diastolik:'f36', map:'f37', spo2:'f38', nabiz:'f39',
@@ -2557,6 +2558,28 @@
                 }
             });
 
+            // Sevk tanısı (yazıyla)
+            if (map.sevk_tanisi && data.sevk_tanisi != null && String(data.sevk_tanisi).trim() !== '') {
+                const el = document.getElementById(map.sevk_tanisi);
+                if (el && (!el.value || el.value.trim() === '')) {
+                    el.value = String(data.sevk_tanisi).trim();
+                    el.classList.add('auto-filled');
+                    setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                    filled++;
+                }
+            }
+
+            // ICD-10 tanı kodu
+            if (map.icd10 && data.icd10 != null && String(data.icd10).trim() !== '') {
+                const el = document.getElementById(map.icd10);
+                if (el && (!el.value || el.value.trim() === '')) {
+                    el.value = String(data.icd10).trim();
+                    el.classList.add('auto-filled');
+                    setTimeout(() => el.classList.remove('auto-filled'), 5000);
+                    filled++;
+                }
+            }
+
             // Sevk endikasyonu / sevk nedeni (özellikle ASOS alt sayfalarından)
             if (map.sevk_endikasyonu && data.sevk_endikasyonu != null && String(data.sevk_endikasyonu).trim() !== '') {
                 const v = mapSevkEndikasyonu(data.sevk_endikasyonu);
@@ -2705,7 +2728,7 @@
 
                 const phaseLabel = phase === 'pre' ? 'sevk öncesi' : 'hedef hastaneye kabul sırasındaki';
                 const schemaKeys = phase === 'pre'
-                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, sevk_endikasyonu, sevk_nedeni, kabul_eden_birim, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
+                    ? 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, sevk_tanisi, icd10, sevk_endikasyonu, sevk_nedeni, kabul_eden_birim, sevk_tarihi, sevk_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, vazopressor'
                     : 'tc_kimlik_no, yas, cinsiyet, gonderen_kurum, alan_kurum, kabul_saati, sistolik, diastolik, map, spo2, nabiz, solunum, ates, gks, avpu, ventilasyon, hemoglobin, ph, laktat';
 
                 const promptText =
@@ -2718,7 +2741,7 @@ Kurallar:
 - cinsiyet: "Erkek" | "Kadın" | "E" | "K"
 - gonderen_kurum: gönderen kurum adı (ör. "Malatya Eğitim ve Araştırma Hastanesi", "MEAH", "Battalgazi Devlet Hastanesi", "BDH")
 - alan_kurum: alıcı/hedef kurum adı (ör. "Turgut Özal Tıp Merkezi")
-${phase === 'pre' ? '- sevk_endikasyonu: sevk endikasyonu metni (ör. "İleri tetkik", "YBÜ", "Cerrahi", "Branş eksikliği", "Ekipman eksikliği" vb.)\n- sevk_nedeni: sevk nedeni metni (yazıyla)\n- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
+${phase === 'pre' ? '- sevk_tanisi: sevk tanısı metni (yazıyla, ör. "Akut koroner sendrom", "İntraserebral kanama", "Multiple travma")\n- icd10: ICD-10 tanı kodu (ör. "I21.9", "R07.4", "S06.5") - ÖNEMLİ: görselde açıkça varsa mutlaka oku\n- sevk_endikasyonu: sevk endikasyonu metni (ör. "İleri tetkik", "YBÜ", "Cerrahi", "Branş eksikliği", "Ekipman eksikliği" vb.)\n- sevk_nedeni: sevk nedeni metni (yazıyla)\n- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
 - map: ortalama arteriyel basınç (yalnızca görselde açıkça varsa)
 - spo2: oksijen satürasyonu (yalnızca sayı, % işareti olmadan)
