@@ -123,6 +123,15 @@
             position: relative;
         }
 
+        .upload-panels-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
         .pdf-upload-zone {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -928,35 +937,13 @@
 
     <div class="main-content">
         <div class="left-panel">
-            <div class="pdf-upload-zone" id="drop-zone">
-                <div class="upload-icon">📄</div>
-                <h2>PDF Dosyasını Sürükleyin</h2>
-                <p style="margin-top:0.5rem; color:var(--text-secondary)">veya seçmek için tıklayın</p>
-                <input type="file" id="file-input" accept=".pdf" style="display:none">
-                <button class="btn btn-primary" style="margin-top:1rem" onclick="document.getElementById('file-input').click()">Dosya Seç</button>
-            </div>
-            <div class="pdf-viewer-container" id="pdf-viewer" style="display:none">
-                <!-- PDF rendered canvas goes here if needed, but we'll focus on text -->
-                <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
-                    PDF Yüklendi. Metin analizi yapıldı.
-                </div>
-            </div>
-            <div class="extracted-text-panel">
-                <div class="panel-header">
-                    <span>Çıkarılan Metin</span>
-                    <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="copySelectedText()">Seçileni Kopyala</button>
-                </div>
-                <div class="extracted-text-content" id="extracted-text">
-                    PDF yüklendiğinde metin burada görünecektir...
-                </div>
+            <div class="upload-panels-container" id="upload-panels-container">
+                <!-- Sevk Öncesi ve Sevk Sonrası yükleme panelleri JS ile eklenir -->
             </div>
         </div>
 
         <div class="right-panel">
             <div class="form-actions">
-                <button class="btn btn-warning" onclick="autoFillForm()">
-                    ✨ Otomatik Doldur
-                </button>
                 <button class="btn btn-primary" style="margin-left:auto" onclick="saveRecord()">
                     💾 Kaydet (Ctrl+S)
                 </button>
@@ -1196,12 +1183,6 @@
 
                 const accordion = document.createElement('div');
                 accordion.className = 'accordion-item';
-                
-                // Vital bulgular bölümlerinde yan yana düzen (vision panel + form)
-                const needsSideBySide = (cat.id === 7 || cat.id === 9);
-                if (needsSideBySide) {
-                    accordion.classList.add('vision-side-by-side');
-                }
                 if(cat.id === 1) accordion.classList.add('active'); // Open first by default
 
                 accordion.innerHTML = `
@@ -1210,18 +1191,9 @@
                         <div class="accordion-status"><span class="cat-filled">0</span> / ${catFields.length} dolu</div>
                     </div>
                     <div class="accordion-content">
-                        ${needsSideBySide ? '<div class="vision-layout-wrapper"><div class="vision-panel-column"></div><div class="form-grid-column">' : ''}
                         <div class="form-grid"></div>
-                        ${needsSideBySide ? '</div></div>' : ''}
                     </div>
                 `;
-
-                // Vision panelini ekle (yan yana düzende)
-                if (needsSideBySide) {
-                    const phase = cat.id === 7 ? 'pre' : 'post';
-                    const visionColumn = accordion.querySelector('.vision-panel-column');
-                    if (visionColumn) visionColumn.appendChild(buildVisionPanel(phase));
-                }
 
                 const grid = accordion.querySelector('.form-grid');
 
@@ -1255,6 +1227,14 @@
 
                 container.appendChild(accordion);
             });
+
+            // Sol panele Sevk Öncesi ve Sevk Sonrası yükleme panellerini ekle
+            const uploadContainer = document.getElementById('upload-panels-container');
+            if (uploadContainer) {
+                uploadContainer.innerHTML = '';
+                uploadContainer.appendChild(buildVisionPanel('pre'));
+                uploadContainer.appendChild(buildVisionPanel('post'));
+            }
 
             updateProgress();
             renderTable();
@@ -1320,64 +1300,6 @@
                 exportToExcel();
             }
         });
-
-        // PDF Handling
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.addEventListener('dragover', e => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', e => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-        });
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if(e.dataTransfer.files.length) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
-        fileInput.addEventListener('change', e => {
-            if(e.target.files.length) {
-                handleFile(e.target.files[0]);
-            }
-        });
-
-        async function handleFile(file) {
-            if(file.type !== 'application/pdf') {
-                showToast('Lütfen geçerli bir PDF dosyası yükleyin.', 'error');
-                return;
-            }
-
-            dropZone.classList.add('hidden');
-            document.getElementById('pdf-viewer').style.display = 'block';
-            document.getElementById('extracted-text').textContent = "PDF ayrıştırılıyor, lütfen bekleyin...";
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await window.pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                let fullText = '';
-                
-                for(let i=1; i<=pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
-                }
-
-                parsedPdfText = fullText;
-                document.getElementById('extracted-text').textContent = fullText;
-                showToast('PDF metni başarıyla çıkarıldı.');
-                
-            } catch(err) {
-                console.error(err);
-                showToast('PDF okunurken bir hata oluştu.', 'error');
-                dropZone.classList.remove('hidden');
-            }
-        }
 
         function copySelectedText() {
             const selection = window.getSelection().toString();
@@ -1726,11 +1648,6 @@
                 document.getElementById(f.id).value = '';
             });
             updateProgress();
-            parsedPdfText = '';
-            document.getElementById('extracted-text').textContent = 'PDF yüklendiğinde metin burada görünecektir...';
-            document.getElementById('pdf-viewer').style.display = 'none';
-            dropZone.classList.remove('hidden');
-            fileInput.value = '';
         }
 
         function deleteRecord(tc) {
@@ -1909,16 +1826,6 @@
                             🔍 Fotoğraftan Verileri Oku
                         </button>
                         <span class="vision-status" id="vision-status-${phase}"></span>
-                    </div>
-                    <div class="vision-apikey-row">
-                        <input type="password" id="vision-apikey-${phase}" placeholder="Abacus.AI API anahtarı" value="${getApiKey()}"
-                               onchange="saveVisionApiKey(this.value)" autocomplete="off">
-                        <button type="button" class="btn btn-secondary"
-                                onclick="saveVisionApiKey(document.getElementById('vision-apikey-${phase}').value, true)">Kaydet</button>
-                    </div>
-                    <div class="vision-hint">
-                        🔒 API anahtarı yalnızca bu tarayıcıda (localStorage) saklanır, hiçbir sunucuya gönderilmez.
-                        Görseller yalnızca "Verileri Oku" anında analiz için Abacus.AI'a iletilir.
                     </div>
                 </div>
             `;
