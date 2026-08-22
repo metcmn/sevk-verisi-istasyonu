@@ -1623,6 +1623,10 @@
 
             applyInstitutionRules(senderName, receiverName);
 
+            // ===== 17. TETKİK / KONSÜLTASYON KURALLARI =====
+            const kabulEdenRaw = document.getElementById('f17') ? document.getElementById('f17').selectedOptions?.[0]?.text : '';
+            filledCount += applyTetkikKonsultasyonRules(senderName, rawText, kabulEdenRaw);
+
             // ===== FINALIZE =====
             updateProgress();
             
@@ -2375,6 +2379,70 @@
             return filled;
         }
 
+        function hasBtEvidenceFromText(rawText) {
+            const t = normalizeInstitutionName(rawText);
+            if (!t) return false;
+
+            // "BT yok/çekilmedi" gibi negatif ifadeler varsa BT yapılmadı kabul edilir
+            const negativePatterns = [
+                /bt\s*(yok|cekilmedi|cekilmemis|yapilmadi|istenmedi)/,
+                /(bt|tomografi).{0,20}(yok|cekilmedi|yapilmadi)/
+            ];
+            if (negativePatterns.some(p => p.test(t))) return false;
+
+            const btPatterns = [
+                /\b(bt|bilgisayarli tomografi|tomografi|toraks bt|kraniyal bt|kontrastli bt)\b/,
+                /bt\s*(cekildi|cekilmis|yapildi|sonucu|raporu|bulgusu)/,
+                /(cekilen|istenen)\s*bt/
+            ];
+            return btPatterns.some(p => p.test(t));
+        }
+
+        function hasAcceptedUnitEvidence(rawText, kabulEdenBirimRaw) {
+            const directKabul = normalizeInstitutionName(kabulEdenBirimRaw);
+            if (directKabul && /acil|yogun bakim|ybu|servis|ameliyathane/.test(directKabul)) return true;
+
+            const t = normalizeInstitutionName(rawText);
+            if (!t) return false;
+
+            // Yalın "YBÜ/servis" geçişi değil; kabul/yatış bağlamı aranır
+            const acceptedPatterns = [
+                /(yogun bakim|ybu|servis|ameliyathane).{0,30}(kabul|yat(is|is)|alin(di|mis)|devir|teslim)/,
+                /(kabul|yat(is|is)|alin(di|mis)|devir|teslim).{0,30}(yogun bakim|ybu|servis|ameliyathane)/,
+                /hast[a]?\s+bir\s+birim\s+tarafindan\s+kabul\s+edil/,
+                /yatak\s+teyidi\s+(alindi|verildi|yapildi)/
+            ];
+            return acceptedPatterns.some(p => p.test(t));
+        }
+
+        function applyTetkikKonsultasyonRules(senderName, contextText, kabulEdenBirimRaw) {
+            let filled = 0;
+            const senderType = detectInstitutionType(senderName || '');
+
+            // BT: Belgede açık sonuç/işlem yoksa yapılmadı kabul edilir.
+            // Kurumda BT cihazı yoksa zaten yapılamaz.
+            const senderHasBt = (senderType === 'meah' || senderType === 'bdh' || senderType === 'darende');
+            const hasBtEvidence = hasBtEvidenceFromText(contextText);
+            filled += setSelectField('f25', (senderHasBt && hasBtEvidence) ? 1 : 0);
+
+            // LAB ve patolojik bulgu: tüm merkezlerde var kabul edilir
+            filled += setSelectField('f28', 1);
+            filled += setSelectField('f29', 1);
+
+            // Türkiye e-Nabız nedeniyle sistem veri paylaşımı her zaman var
+            filled += setSelectField('f31', 1);
+
+            // Kabul/yatış belirtiliyse: konsültasyon, alıcı merkeze bilgi, yatak teyidi = evet
+            // Belirtilmiyorsa: hayır
+            const accepted = hasAcceptedUnitEvidence(contextText, kabulEdenBirimRaw);
+            filled += setSelectField('f33', accepted ? 1 : 0);
+            filled += setSelectField('f30', accepted ? 1 : 0);
+            filled += setSelectField('f32', accepted ? 1 : 0);
+            filled += setSelectField('f34', accepted ? 1 : 0);
+
+            return filled;
+        }
+
         function applyInstitutionRules(senderName, receiverName) {
             let filled = 0;
             // Kullanıcı kararı: Gönderen birim her zaman Acil servis
@@ -2532,6 +2600,16 @@
             const senderName = data.gonderen_kurum || data.gönderen_kurum || data.kurum || '';
             const receiverName = data.alan_kurum || data.alici_kurum || data.alıcı_kurum || data.hedef_kurum || '';
             filled += applyInstitutionRules(senderName, receiverName);
+
+            // Tetkik / konsültasyon alanlarını ek kurallarla otomatik doldur
+            const contextText = [
+                data.sevk_endikasyonu,
+                data.sevk_nedeni,
+                data.kabul_eden_birim,
+                senderName,
+                receiverName
+            ].filter(Boolean).join(' | ');
+            filled += applyTetkikKonsultasyonRules(senderName, contextText, data.kabul_eden_birim || '');
 
             updateProgress();
             return filled;
