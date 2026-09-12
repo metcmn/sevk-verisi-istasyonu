@@ -2462,29 +2462,64 @@
         }
 
         // Transfer mesafe ve süre bilgileri (TÖTM'ye olan mesafeler)
+        // Tüm anahtarlar normalizeInstitutionName() çıktısıyla eşleşmek üzere ASCII/küçük harf formatındadır.
         const TRANSFER_DISTANCE_DATA = {
+            // Malatya Battalgazi Devlet Hastanesi — 14 km, 15-20 dk
             'battalgazi devlet': { km: 14, dakika: 18 },
             'bdh': { km: 14, dakika: 18 },
+
+            // Malatya Eğitim ve Araştırma Hastanesi — 18 km, 20-25 dk
             'malatya egitim arastirma': { km: 18, dakika: 23 },
+            'malatya egitim ve arastirma': { km: 18, dakika: 23 },
             'meah': { km: 18, dakika: 23 },
+
+            // Yeşilyurt Hasan Çalık Devlet Hastanesi — 24 km, 25-30 dk
             'yesilyurt hasan calik': { km: 24, dakika: 28 },
-            'battalgazi eski malatya ilce': { km: 20, dakika: 25 },
-            'akkadag': { km: 46, dakika: 48 },
-            'akçadağ': { km: 46, dakika: 48 },
-            'puturge': { km: 62, dakika: 71 },
-            'pütürge': { km: 62, dakika: 71 },
-            'arguvan': { km: 80, dakika: 70 },
-            'doganyol': { km: 92, dakika: 90 },
-            'doğanyol': { km: 92, dakika: 90 },
-            'darende': { km: 125, dakika: 85 },
+            'hasan calik': { km: 24, dakika: 28 },
+
+            // Battalgazi (Eski Malatya) İlçe DH — 20 km, ~25 dk
+            'battalgazi eski malatya': { km: 20, dakika: 25 },
+            'eski malatya': { km: 20, dakika: 25 },
+
+            // Kale İlçe Hastanesi — 28 km, 25-30 dk
             'kale ilce': { km: 28, dakika: 28 },
+            'kale ilce hastanesi': { km: 28, dakika: 28 },
+
+            // Akçadağ Şehit Gökhan Aslan Devlet Hastanesi — 46.2 km, ~48 dk
+            'akcadag': { km: 46.2, dakika: 48 },
+            'gokhan aslan': { km: 46.2, dakika: 48 },
+
+            // Yazıhan Şehit Eyüp Hacıoğlu İlçe Hastanesi — 50 km, 45-50 dk
             'yazihan': { km: 50, dakika: 48 },
-            'yazıhan': { km: 50, dakika: 48 },
-            'dogansehir': { km: 70, dakika: 61 },
-            'doğanşehir': { km: 70, dakika: 61 },
-            'hekimhan': { km: 85, dakika: 76 },
+            'eyup hacioglu': { km: 50, dakika: 48 },
+
+            // Pütürge Devlet Hastanesi — 61.7 km, ~71 dk
+            'puturge': { km: 61.7, dakika: 71 },
+
+            // Doğanşehir Şehit Esra Köse Başaran Devlet Hastanesi — 70.1 km, ~61 dk
+            'dogansehir': { km: 70.1, dakika: 61 },
+            'esra kose basaran': { km: 70.1, dakika: 61 },
+
+            // Arguvan İlçe DH — 80 km, ~70 dk
+            'arguvan': { km: 80, dakika: 70 },
+
+            // Hekimhan Devlet Hastanesi — 84.6 km, ~76 dk
+            'hekimhan': { km: 84.6, dakika: 76 },
+
+            // Doğanyol İlçe DH — 92 km, ~90 dk
+            'doganyol': { km: 92, dakika: 90 },
+
+            // Kuluncak Şehit Mehmet Ali Şekerci İlçe Devlet Hastanesi — 115 km, ~101 dk
             'kuluncak': { km: 115, dakika: 101 },
-            'arapgir': { km: 128, dakika: 95 }
+            'mehmet ali sekerci': { km: 115, dakika: 101 },
+
+            // Darende Hulusi Efendi Devlet Hastanesi — 125 km, 85 dk
+            'darende': { km: 125, dakika: 85 },
+            'hulusi efendi': { km: 125, dakika: 85 },
+
+            // Arapgir Ali Özge Devlet Hastanesi — 128 km, ~95 dk
+            'arapgir': { km: 128, dakika: 95 },
+            'ali ozge': { km: 128, dakika: 95 },
         };
 
         function getTransferDistanceData(institutionName) {
@@ -2906,7 +2941,7 @@ Kurallar:
 - tc_kimlik_no: 11 haneli TC Kimlik Numarası (yalnızca rakamlar, boşluksuz)
 - yas: hastanın yaşı (yalnızca sayı)
 - cinsiyet: "Erkek" | "Kadın" | "E" | "K"
-- gonderen_kurum: gönderen kurum adı (ör. "Malatya Eğitim ve Araştırma Hastanesi", "MEAH", "Battalgazi Devlet Hastanesi", "BDH")
+- gonderen_kurum: gönderen kurum adı — belgede geçen tam adı yaz. Malatya ilindeki bilinen kurumlar: "Malatya Battalgazi Devlet Hastanesi" (kısa: BDH), "Malatya Eğitim ve Araştırma Hastanesi" (kısa: MEAH), "Yeşilyurt Hasan Çalık Devlet Hastanesi", "Akçadağ Şehit Gökhan Aslan Devlet Hastanesi", "Kale İlçe Hastanesi", "Yazıhan Şehit Eyüp Hacıoğlu İlçe Hastanesi", "Pütürge Devlet Hastanesi", "Doğanşehir Şehit Esra Köse Başaran Devlet Hastanesi", "Arguvan İlçe Devlet Hastanesi", "Hekimhan Devlet Hastanesi", "Doğanyol İlçe Devlet Hastanesi", "Kuluncak Şehit Mehmet Ali Şekerci İlçe Devlet Hastanesi", "Darende Hulusi Efendi Devlet Hastanesi", "Arapgir Ali Özge Devlet Hastanesi"
 - alan_kurum: alıcı/hedef kurum adı (ör. "Turgut Özal Tıp Merkezi")
 ${phase === 'pre' ? '- sevk_tanisi: sevk tanısı metni (yazıyla, ör. "Akut koroner sendrom", "İntraserebral kanama", "Multiple travma")\n- icd10: ICD-10 tanı kodu (ör. "I21.9", "R07.4", "S06.5") - ÖNEMLİ: görselde açıkça varsa mutlaka oku\n- sevk_endikasyonu: sevk endikasyonu metni (ör. "İleri tetkik", "YBÜ", "Cerrahi", "Branş eksikliği", "Ekipman eksikliği" vb.)\n- sevk_nedeni: sevk nedeni metni (yazıyla)\n- kabul_eden_birim: hastanın hangi birim tarafından kabul edildiği ("Acil servis" | "Yoğun bakım" | "Servis" | "Diğer" | görselde yoksa null)\n- sevk_tarihi: sevk/başvuru/transfer tarihi "gg.aa.yyyy" formatında (doğum tarihini ALMA)\n- sevk_saati: sevk/başvuru saati "SS:DD" (24 saat) formatında' : '- kabul_saati: hedef hastaneye kabul/teslim saati "SS:DD" (24 saat) formatında'}
 - sistolik/diastolik: kan basıncı mmHg (ör. "130/85" -> sistolik 130, diastolik 85)
